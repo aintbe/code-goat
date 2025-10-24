@@ -1,0 +1,17 @@
+[package]
+name = "judger"
+version = "0.1.0"
+edition = "2024"
+
+[lib]
+name = "judger"
+crate-type = ["rlib", "cdylib"]
+
+[dependencies]
+cgroups-rs = "0.4.0"
+libseccomp = "0.4.0"
+log = "0.4.28"
+nix = { version = "0.30.1", features = ["sched", "mount", "resource", "fs", "signal"] }
+serde = { version = "1.0.228", features = ["derive"] }
+serde_json = "1.0.145"
+thiserror = "2.0.17"
