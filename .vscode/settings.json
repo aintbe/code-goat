@@ -1,6 +1,8 @@
 {
-    "files.associations": {
-        "cerrno": "c",
-        "iostream": "cpp"
-    }
+  "files.associations": {
+    "cerrno": "c",
+    "iostream": "cpp",
+    "seccomp_rules.h": "c"
+  },
+  "cmake.sourceDirectory": "/Users/aint/Workspace/among-codes/codedang-judge"
 }

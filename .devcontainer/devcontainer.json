@@ -3,6 +3,10 @@
   "build": {
     "dockerfile": "Dockerfile"
   },
+  "runArgs": ["--cgroupns=host"],
+  "mounts": [
+    "source=/sys/fs/cgroup,target=/sys/fs/cgroup,type=bind,consistency=consistent"
+  ],
   "customizations": {
     "vscode": {
       "settings": {
@@ -10,12 +14,10 @@
       },
       "extensions": [
         "EditorConfig.EditorConfig",
-        // Extensions for example codes
-        "vscjava.vscode-java-pack",
-        "ms-vscode.cpptools",
-        "ms-python.python"
+        "ms-python.python",
+        "rust-lang.rust-analyzer",
+        "GitHub.copilot"
       ]
     }
   }
 }
-
