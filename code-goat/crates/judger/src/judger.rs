@@ -59,7 +59,7 @@ fn try_judge(spec: &RunSpec) -> Result<JudgeResult, InternalError> {
     match unistd::write(&setup_tx, b"1") {
         Ok(_) => info!("Judger finished setting sandbox; notifying runner to resume..."),
         Err(nix::Error::EPIPE) => {
-            error!("Read end is closed; waiting for runner to finish...");
+            error!("Read end is closed due to runnner's abortion; waiting to reap it...");
         }
         Err(e) => return Err(InternalError::Notify(e)),
     };

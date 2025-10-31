@@ -38,8 +38,8 @@ impl CgroupSandbox {
         let builder = CgroupBuilder::new(CGROUP_NAME)
             // Forces processes in this cgroup to use CPU up to 100%.
             .cpu()
-            // .period(100 * 1000)
-            // .quota(100 * 1000)
+            .period(100 * 1000)
+            .quota(100 * 1000)
             .done()
             // Minimize memory swapping.
             .memory()
