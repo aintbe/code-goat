@@ -13,7 +13,7 @@ int main() {
     // fopen() 함수는 파일 열기에 실패하면 NULL을 반환합니다.
     if (file_ptr == NULL) {
         // 실패 이유를 함께 출력합니다 (예: "Permission denied")
-        perror("파일 열기 실패");
+        // perror("파일 열기 실패");
         printf("예상된 결과입니다. 민감한 파일은 루트(root) 권한 없이는 접근할 수 없습니다. 👍\n");
         return 1; // 실패를 의미하는 1을 반환하며 종료
     }

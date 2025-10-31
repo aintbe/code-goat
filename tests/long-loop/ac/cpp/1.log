@@ -1,18 +1,2 @@
-FATAL [2025-10-24 08:23:02] [/workspaces/among-codes/qingdao-judge/src/child.c:87]Error: System errno: No such file or directory; Internal errno: DUP2_FAILED
-FATAL [2025-10-24 08:23:08] [/workspaces/among-codes/qingdao-judge/src/child.c:87]Error: System errno: No such file or directory; Internal errno: DUP2_FAILED
-FATAL [2025-10-24 08:23:09] [/workspaces/among-codes/qingdao-judge/src/child.c:87]Error: System errno: No such file or directory; Internal errno: DUP2_FAILED
-FATAL [2025-10-24 08:32:25] [/workspaces/among-codes/qingdao-judge/src/child.c:87]Error: System errno: No such file or directory; Internal errno: DUP2_FAILED
-FATAL [2025-10-24 08:33:27] [/workspaces/among-codes/qingdao-judge/src/child.c:87]Error: System errno: No such file or directory; Internal errno: DUP2_FAILED
-FATAL [2025-10-24 08:33:53] [/workspaces/among-codes/qingdao-judge/src/child.c:87]Error: System errno: No such file or directory; Internal errno: DUP2_FAILED
-FATAL [2025-10-24 08:35:12] [/workspaces/among-codes/qingdao-judge/src/child.c:87]Error: System errno: No such file or directory; Internal errno: DUP2_FAILED
-FATAL [2025-10-24 08:35:25] [/workspaces/among-codes/qingdao-judge/src/child.c:87]Error: System errno: No such file or directory; Internal errno: DUP2_FAILED
-FATAL [2025-10-24 08:36:00] [/workspaces/among-codes/qingdao-judge/src/child.c:87]Error: System errno: No such file or directory; Internal errno: DUP2_FAILED
-FATAL [2025-10-24 08:36:03] [/workspaces/among-codes/qingdao-judge/src/child.c:87]Error: System errno: No such file or directory; Internal errno: DUP2_FAILED
-FATAL [2025-10-24 08:36:08] [/workspaces/among-codes/qingdao-judge/src/child.c:87]Error: System errno: No such file or directory; Internal errno: DUP2_FAILED
-FATAL [2025-10-24 08:36:14] [/workspaces/among-codes/qingdao-judge/src/child.c:87]Error: System errno: No such file or directory; Internal errno: DUP2_FAILED
-FATAL [2025-10-24 08:36:25] [/workspaces/among-codes/qingdao-judge/src/child.c:87]Error: System errno: No such file or directory; Internal errno: DUP2_FAILED
-FATAL [2025-10-24 08:39:31] [/workspaces/among-codes/qingdao-judge/src/child.c:87]Error: System errno: No such file or directory; Internal errno: DUP2_FAILED
-FATAL [2025-10-24 08:41:41] [/workspaces/code-goat/qingdao-judge/src/child.c:87]Error: System errno: No such file or directory; Internal errno: DUP2_FAILED
-FATAL [2025-10-24 08:42:34] [/workspaces/code-goat/qingdao-judge/src/child.c:87]Error: System errno: No such file or directory; Internal errno: DUP2_FAILED
-FATAL [2025-10-24 08:43:45] [/workspaces/code-goat/qingdao-judge/src/child.c:87]Error: System errno: No such file or directory; Internal errno: DUP2_FAILED
-FATAL [2025-10-24 08:45:18] [/workspaces/code-goat/qingdao-judge/src/child.c:87]Error: System errno: No such file or directory; Internal errno: DUP2_FAILED
+FATAL [2025-10-31 10:55:10] [/workspaces/code-goat/qingdao-judge/src/runner.c:39]Error: ROOT_REQUIRED
+FATAL [2025-10-31 10:55:57] [/workspaces/code-goat/qingdao-judge/src/runner.c:39]Error: ROOT_REQUIRED

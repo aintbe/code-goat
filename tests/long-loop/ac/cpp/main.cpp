@@ -10,7 +10,7 @@ int main() {
     // 이 숫자는 컴퓨터의 CPU 속도에 따라 1초 이상 걸리도록
     // 충분히 커야 합니다. 50억 번 정도면 웬만한 최신 CPU에서도 1초를 넘깁니다.
     // (숫자가 너무 작으면 1초 이내에 끝날 수 있습니다.)
-    unsigned long long iterations = 500000000ULL;
+    unsigned long long iterations = 50000000000ULL;
 
     std::cout << "Starting CPU-intensive loop for >1 second..." << std::endl;
 
