@@ -6,7 +6,10 @@ use std::{
 
 use cgroups_rs::{
     CgroupPid,
-    fs::{Cgroup, cgroup_builder::CgroupBuilder, hierarchies, memory::MemController},
+    fs::{
+        Cgroup, cgroup_builder::CgroupBuilder, cpu::CpuController, hierarchies,
+        memory::MemController,
+    },
 };
 use libseccomp::{ScmpAction, ScmpFilterContext, ScmpSyscall, error::SeccompError};
 use log::error;
@@ -70,9 +73,33 @@ impl CgroupSandbox {
         let controller = self
             .inner
             .controller_of::<MemController>()
-            .ok_or_else(|| InternalError::ReadCgroupStat)?;
+            .ok_or(InternalError::ReadCgroupMemoryStats)?;
 
         Ok(controller.memory_stat().max_usage_in_bytes)
+    }
+
+    pub fn read_cpu_time_usage(&self) -> Result<u64, InternalError> {
+        let cpu = self
+            .inner
+            .controller_of::<CpuController>()
+            .ok_or(InternalError::ReadCgroupCpuStats)?
+            .cpu();
+
+        let cpu_stat: Vec<&str> = cpu
+            .stat
+            .lines()
+            .find(|line| line.starts_with("usage_usec"))
+            .ok_or(InternalError::ReadCgroupCpuStats)?
+            .split_whitespace()
+            .collect();
+
+        let cpu_time_in_us: u64 = cpu_stat
+            .get(1)
+            .ok_or(InternalError::ReadCgroupCpuStats)?
+            .parse()
+            .map_err(|_| InternalError::ReadCgroupCpuStats)?;
+
+        Ok(cpu_time_in_us / 1000)
     }
 }
 

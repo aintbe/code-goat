@@ -152,14 +152,14 @@ pub struct ResourceUsage {
     pub memory: u64,
 
     /// CPU time used in milliseconds.
-    pub cpu_time: i64,
+    pub cpu_time: u64,
 
     /// Real time used in milliseconds.
     pub real_time: u128,
 }
 
 impl ResourceUsage {
-    pub fn new(memory: u64, cpu_time: i64, real_time: u128) -> Self {
+    pub fn new(memory: u64, cpu_time: u64, real_time: u128) -> Self {
         Self {
             memory,
             cpu_time,
@@ -210,7 +210,10 @@ pub enum InternalError {
     AddToCgroup(cgroups_rs::fs::error::Error),
 
     #[error("Failed to read memory stats from cgroup")]
-    ReadCgroupStat,
+    ReadCgroupMemoryStats,
+
+    #[error("Failed to read cpu stats from cgroup")]
+    ReadCgroupCpuStats,
 
     #[error("Failed to clone: {0}")]
     Clone(nix::Error),
@@ -223,9 +226,6 @@ pub enum InternalError {
 
     #[error("Failed to wait runner process")]
     Wait(nix::Error),
-
-    #[error("Failed to read time stats from rusage: {0}")]
-    ReadRusage(nix::Error),
 
     #[error("Failed to read output: {0}")]
     ReadOutput(io::Error),

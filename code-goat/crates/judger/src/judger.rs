@@ -9,9 +9,7 @@ use std::{
 use log::{error, info};
 use nix::{
     sys::{
-        resource::{self, UsageWho},
         signal::{self, Signal::SIGKILL},
-        time::TimeValLike,
         wait::{self, WaitStatus},
     },
     unistd::{self, Pid},
@@ -165,16 +163,9 @@ fn get_resource_usage(
     duration: Duration,
 ) -> Result<ResourceUsage, InternalError> {
     let memory = cg_sandbox.read_memory_usage()?;
+    let cpu_time = cg_sandbox.read_cpu_time_usage()?;
 
-    let resource_usage =
-        resource::getrusage(UsageWho::RUSAGE_CHILDREN).map_err(InternalError::ReadRusage)?;
-    let cpu_time = resource_usage.user_time() + resource_usage.system_time();
-
-    Ok(ResourceUsage::new(
-        memory,
-        cpu_time.num_milliseconds(),
-        duration.as_millis(),
-    ))
+    Ok(ResourceUsage::new(memory, cpu_time, duration.as_millis()))
 }
 
 /// Determine the judge status based on resource usage.
@@ -203,8 +194,8 @@ fn get_judge_status(
         let output = &spec.output_path.clone().unwrap();
         let answer = &spec.answer_path.clone().unwrap();
 
-        is_accepted(output, answer).map(|a| {
-            if a {
+        is_accepted(output, answer).map(|accepted| {
+            if accepted {
                 JudgeStatus::Accepted
             } else {
                 JudgeStatus::WrongAnswer
