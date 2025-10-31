@@ -50,7 +50,7 @@ where
 }
 
 #[unsafe(no_mangle)]
-pub extern "C" fn c_judge(spec: CRunSpec) -> *mut c_char {
+pub extern "C" fn judger_judge(spec: CRunSpec) -> *mut c_char {
     let generate_error = |message: String| JudgeResult {
         status: JudgeStatus::InternalError,
         message: Some(message),
@@ -61,7 +61,7 @@ pub extern "C" fn c_judge(spec: CRunSpec) -> *mut c_char {
 
     let result = match parse(spec) {
         Ok(spec) => judger::judge(spec),
-        Err(message) => generate_error(message.to_string()),
+        Err(key) => generate_error(format!("Failed to parse: {}", key)),
     };
 
     let json = serde_json::to_string_pretty(&result).unwrap_or("{}".to_string());
@@ -117,7 +117,7 @@ fn parse_optional_str(key: &str, string: *const c_char) -> Result<Option<String>
 
 fn parse_cstr_array(key: &str, array: *const c_char) -> Result<Vec<CString>, &str> {
     if array.is_null() {
-        return Err(key);
+        return Ok(vec![]);
     }
     let args_str = unsafe { CStr::from_ptr(array) }.to_str().map_err(|_| key)?;
 
@@ -135,7 +135,7 @@ fn parse_cstr_array(key: &str, array: *const c_char) -> Result<Vec<CString>, &st
 }
 
 #[unsafe(no_mangle)]
-pub extern "C" fn c_free(return_value: *mut c_char) {
+pub extern "C" fn judger_free(return_value: *mut c_char) {
     if return_value.is_null() {
         return;
     }
@@ -153,7 +153,10 @@ pub extern "C" fn c_free(return_value: *mut c_char) {
 /// else { printf("Accepted"); }
 /// ```
 #[unsafe(no_mangle)]
-pub extern "C" fn c_grade_output(output_path: *const c_char, answer_path: *const c_char) -> c_int {
+pub extern "C" fn judger_grade_output(
+    output_path: *const c_char,
+    answer_path: *const c_char,
+) -> c_int {
     let output_path = match parse_str("output_path", output_path) {
         Ok(path) => path,
         Err(_) => return -1,
