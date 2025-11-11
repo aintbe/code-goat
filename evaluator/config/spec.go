@@ -15,7 +15,10 @@ type JudgeSpec struct {
 
 func NewJudgeSpec(b *Benchmark, t *TestCase, p *Profile) *JudgeSpec {
 	targetDir := fmt.Sprintf("%s/%s/%s/%s/", b.testDir, b.Problem, b.Submission, b.Language)
-	inputPath := fmt.Sprintf("%s/%s/testcases/%s.in", b.testDir, b.Problem, t.Id)
+	inputPath := ""
+	if t.HasInput {
+		inputPath = fmt.Sprintf("%s/%s/testcases/%s.in", b.testDir, b.Problem, t.Id)
+	}
 
 	return &JudgeSpec{
 		ExePath:    targetDir + "main",

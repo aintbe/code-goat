@@ -7,22 +7,31 @@ environment:
     os: linux/arm64 (ubuntu 24.04)
     cpu: Apple Chip (8 Core)
     memory: 9.7GB
-    timestamp: 2025-11-11T19:08:38.822558544Z
+    timestamp: 2025-11-11T19:13:06.677710418Z
 summaries:
     "1":
         status:
+            code_goat: Exited
             qoj_v1: Exited
             qoj_v2: Exited
         memory:
+            code_goat:
+                avg: 25498419
+                max: 25575424
+                min: 25477120
             qoj_v1:
-                avg: 0
-                max: 0
-                min: 0
+                avg: 26222182
+                max: 26267648
+                min: 26120192
             qoj_v2:
-                avg: 0
-                max: 0
-                min: 0
+                avg: 25690521
+                max: 25735168
+                min: 25473024
         cpu_time:
+            code_goat:
+                avg: 5
+                max: 6
+                min: 5
             qoj_v1:
                 avg: 0
                 max: 0
@@ -32,6 +41,10 @@ summaries:
                 max: 0
                 min: 0
         real_time:
+            code_goat:
+                avg: "6"
+                max: "7"
+                min: "6"
             qoj_v1:
                 avg: "0"
                 max: "0"
@@ -41,11 +54,15 @@ summaries:
                 max: "0"
                 min: "0"
         judge_time:
+            code_goat:
+                avg: 21.934345ms
+                max: 30.919ms
+                min: 14.52625ms
             qoj_v1:
-                avg: 2.825446ms
-                max: 3.867084ms
-                min: 2.385458ms
+                avg: 6.882387ms
+                max: 9.110416ms
+                min: 5.871ms
             qoj_v2:
-                avg: 18.600054ms
-                max: 35.152875ms
-                min: 3.655375ms
+                avg: 26.690204ms
+                max: 35.3055ms
+                min: 9.730916ms

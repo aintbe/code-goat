@@ -2,350 +2,390 @@
   "1": [
     {
       "judger": "code_goat",
-      "judge_time": 23078584,
-      "status": "InternalError",
-      "message": "Failed to open file /workspace/tests/malloc/testcases/1.in: entity not found",
-      "exit_code": null,
+      "judge_time": 30248292,
+      "status": "Exited",
+      "message": null,
+      "exit_code": 0,
       "signal": null,
-      "resource_usage": null
+      "resource_usage": {
+        "memory": 25575424,
+        "cpu_time": 6,
+        "real_time": 7
+      }
     },
     {
       "judger": "code_goat",
-      "judge_time": 1188750,
-      "status": "InternalError",
-      "message": "Failed to open file /workspace/tests/malloc/testcases/1.in: entity not found",
-      "exit_code": null,
+      "judge_time": 14526250,
+      "status": "Exited",
+      "message": null,
+      "exit_code": 0,
       "signal": null,
-      "resource_usage": null
+      "resource_usage": {
+        "memory": 25477120,
+        "cpu_time": 5,
+        "real_time": 6
+      }
     },
     {
       "judger": "code_goat",
-      "judge_time": 1321209,
-      "status": "InternalError",
-      "message": "Failed to open file /workspace/tests/malloc/testcases/1.in: entity not found",
-      "exit_code": null,
+      "judge_time": 21178291,
+      "status": "Exited",
+      "message": null,
+      "exit_code": 0,
       "signal": null,
-      "resource_usage": null
+      "resource_usage": {
+        "memory": 25481216,
+        "cpu_time": 6,
+        "real_time": 6
+      }
     },
     {
       "judger": "code_goat",
-      "judge_time": 2094125,
-      "status": "InternalError",
-      "message": "Failed to open file /workspace/tests/malloc/testcases/1.in: entity not found",
-      "exit_code": null,
+      "judge_time": 24203833,
+      "status": "Exited",
+      "message": null,
+      "exit_code": 0,
       "signal": null,
-      "resource_usage": null
+      "resource_usage": {
+        "memory": 25481216,
+        "cpu_time": 5,
+        "real_time": 6
+      }
     },
     {
       "judger": "code_goat",
-      "judge_time": 1092666,
-      "status": "InternalError",
-      "message": "Failed to open file /workspace/tests/malloc/testcases/1.in: entity not found",
-      "exit_code": null,
+      "judge_time": 18477958,
+      "status": "Exited",
+      "message": null,
+      "exit_code": 0,
       "signal": null,
-      "resource_usage": null
+      "resource_usage": {
+        "memory": 25571328,
+        "cpu_time": 6,
+        "real_time": 6
+      }
     },
     {
       "judger": "code_goat",
-      "judge_time": 834084,
-      "status": "InternalError",
-      "message": "Failed to open file /workspace/tests/malloc/testcases/1.in: entity not found",
-      "exit_code": null,
+      "judge_time": 15287541,
+      "status": "Exited",
+      "message": null,
+      "exit_code": 0,
       "signal": null,
-      "resource_usage": null
+      "resource_usage": {
+        "memory": 25477120,
+        "cpu_time": 5,
+        "real_time": 6
+      }
     },
     {
       "judger": "code_goat",
-      "judge_time": 888625,
-      "status": "InternalError",
-      "message": "Failed to open file /workspace/tests/malloc/testcases/1.in: entity not found",
-      "exit_code": null,
+      "judge_time": 24142250,
+      "status": "Exited",
+      "message": null,
+      "exit_code": 0,
       "signal": null,
-      "resource_usage": null
+      "resource_usage": {
+        "memory": 25481216,
+        "cpu_time": 6,
+        "real_time": 6
+      }
     },
     {
       "judger": "code_goat",
-      "judge_time": 1081750,
-      "status": "InternalError",
-      "message": "Failed to open file /workspace/tests/malloc/testcases/1.in: entity not found",
-      "exit_code": null,
+      "judge_time": 30919000,
+      "status": "Exited",
+      "message": null,
+      "exit_code": 0,
       "signal": null,
-      "resource_usage": null
+      "resource_usage": {
+        "memory": 25481216,
+        "cpu_time": 6,
+        "real_time": 7
+      }
     },
     {
       "judger": "code_goat",
-      "judge_time": 10234417,
-      "status": "InternalError",
-      "message": "Failed to open file /workspace/tests/malloc/testcases/1.in: entity not found",
-      "exit_code": null,
+      "judge_time": 22739250,
+      "status": "Exited",
+      "message": null,
+      "exit_code": 0,
       "signal": null,
-      "resource_usage": null
+      "resource_usage": {
+        "memory": 25481216,
+        "cpu_time": 6,
+        "real_time": 7
+      }
     },
     {
       "judger": "code_goat",
-      "judge_time": 917209,
-      "status": "InternalError",
-      "message": "Failed to open file /workspace/tests/malloc/testcases/1.in: entity not found",
-      "exit_code": null,
+      "judge_time": 17620792,
+      "status": "Exited",
+      "message": null,
+      "exit_code": 0,
       "signal": null,
-      "resource_usage": null
-    },
-    {
-      "judger": "qoj_v1",
-      "judge_time": 3375584,
-      "status": "Exited",
-      "message": null,
-      "exit_code": 0,
-      "signal": "10",
       "resource_usage": {
-        "memory": 0,
-        "cpu_time": 0,
-        "real_time": 0
+        "memory": 25477120,
+        "cpu_time": 6,
+        "real_time": 7
       }
     },
     {
       "judger": "qoj_v1",
-      "judge_time": 2445959,
+      "judge_time": 9110416,
       "status": "Exited",
       "message": null,
       "exit_code": 0,
-      "signal": "10",
+      "signal": "0",
       "resource_usage": {
-        "memory": 0,
+        "memory": 26263552,
         "cpu_time": 0,
         "real_time": 0
       }
     },
     {
       "judger": "qoj_v1",
-      "judge_time": 2398875,
+      "judge_time": 7395583,
       "status": "Exited",
       "message": null,
       "exit_code": 0,
-      "signal": "10",
+      "signal": "0",
       "resource_usage": {
-        "memory": 0,
+        "memory": 26263552,
         "cpu_time": 0,
         "real_time": 0
       }
     },
     {
       "judger": "qoj_v1",
-      "judge_time": 3007542,
+      "judge_time": 6861417,
       "status": "Exited",
       "message": null,
       "exit_code": 0,
-      "signal": "10",
+      "signal": "0",
       "resource_usage": {
-        "memory": 0,
+        "memory": 26267648,
         "cpu_time": 0,
         "real_time": 0
       }
     },
     {
       "judger": "qoj_v1",
-      "judge_time": 2385458,
+      "judge_time": 7534209,
       "status": "Exited",
       "message": null,
       "exit_code": 0,
-      "signal": "10",
+      "signal": "0",
       "resource_usage": {
-        "memory": 0,
+        "memory": 26263552,
         "cpu_time": 0,
         "real_time": 0
       }
     },
     {
       "judger": "qoj_v1",
-      "judge_time": 2489084,
+      "judge_time": 7635500,
       "status": "Exited",
       "message": null,
       "exit_code": 0,
-      "signal": "10",
+      "signal": "0",
       "resource_usage": {
-        "memory": 0,
+        "memory": 26120192,
         "cpu_time": 0,
         "real_time": 0
       }
     },
     {
       "judger": "qoj_v1",
-      "judge_time": 2508791,
+      "judge_time": 6155458,
       "status": "Exited",
       "message": null,
       "exit_code": 0,
-      "signal": "10",
+      "signal": "0",
       "resource_usage": {
-        "memory": 0,
+        "memory": 26120192,
         "cpu_time": 0,
         "real_time": 0
       }
     },
     {
       "judger": "qoj_v1",
-      "judge_time": 2628791,
+      "judge_time": 6115000,
       "status": "Exited",
       "message": null,
       "exit_code": 0,
-      "signal": "10",
+      "signal": "0",
       "resource_usage": {
-        "memory": 0,
+        "memory": 26202112,
         "cpu_time": 0,
         "real_time": 0
       }
     },
     {
       "judger": "qoj_v1",
-      "judge_time": 3867084,
+      "judge_time": 5873667,
       "status": "Exited",
       "message": null,
       "exit_code": 0,
-      "signal": "10",
+      "signal": "0",
       "resource_usage": {
-        "memory": 0,
+        "memory": 26263552,
         "cpu_time": 0,
         "real_time": 0
       }
     },
     {
       "judger": "qoj_v1",
-      "judge_time": 3147292,
+      "judge_time": 6271625,
       "status": "Exited",
       "message": null,
       "exit_code": 0,
-      "signal": "10",
+      "signal": "0",
       "resource_usage": {
-        "memory": 0,
+        "memory": 26263552,
+        "cpu_time": 0,
+        "real_time": 0
+      }
+    },
+    {
+      "judger": "qoj_v1",
+      "judge_time": 5871000,
+      "status": "Exited",
+      "message": null,
+      "exit_code": 0,
+      "signal": "0",
+      "resource_usage": {
+        "memory": 26193920,
         "cpu_time": 0,
         "real_time": 0
       }
     },
     {
       "judger": "qoj_v2",
-      "judge_time": 18877375,
+      "judge_time": 11082875,
       "status": "Exited",
       "message": null,
       "exit_code": 0,
-      "signal": "10",
+      "signal": "0",
       "resource_usage": {
-        "memory": 0,
+        "memory": 25473024,
         "cpu_time": 0,
         "real_time": 0
       }
     },
     {
       "judger": "qoj_v2",
-      "judge_time": 20813667,
+      "judge_time": 33354125,
       "status": "Exited",
       "message": null,
       "exit_code": 0,
-      "signal": "10",
+      "signal": "0",
       "resource_usage": {
-        "memory": 0,
+        "memory": 25735168,
         "cpu_time": 0,
         "real_time": 0
       }
     },
     {
       "judger": "qoj_v2",
-      "judge_time": 17667125,
+      "judge_time": 29498750,
       "status": "Exited",
       "message": null,
       "exit_code": 0,
-      "signal": "10",
+      "signal": "0",
       "resource_usage": {
-        "memory": 0,
+        "memory": 25735168,
         "cpu_time": 0,
         "real_time": 0
       }
     },
     {
       "judger": "qoj_v2",
-      "judge_time": 22812166,
+      "judge_time": 35305500,
       "status": "Exited",
       "message": null,
       "exit_code": 0,
-      "signal": "10",
+      "signal": "0",
       "resource_usage": {
-        "memory": 0,
+        "memory": 25735168,
         "cpu_time": 0,
         "real_time": 0
       }
     },
     {
       "judger": "qoj_v2",
-      "judge_time": 17632334,
+      "judge_time": 27502292,
       "status": "Exited",
       "message": null,
       "exit_code": 0,
-      "signal": "10",
+      "signal": "0",
       "resource_usage": {
-        "memory": 0,
+        "memory": 25735168,
         "cpu_time": 0,
         "real_time": 0
       }
     },
     {
       "judger": "qoj_v2",
-      "judge_time": 25360083,
+      "judge_time": 30244333,
       "status": "Exited",
       "message": null,
       "exit_code": 0,
-      "signal": "10",
+      "signal": "0",
       "resource_usage": {
-        "memory": 0,
+        "memory": 25735168,
         "cpu_time": 0,
         "real_time": 0
       }
     },
     {
       "judger": "qoj_v2",
-      "judge_time": 19931917,
+      "judge_time": 32389333,
       "status": "Exited",
       "message": null,
       "exit_code": 0,
-      "signal": "10",
+      "signal": "0",
       "resource_usage": {
-        "memory": 0,
+        "memory": 25550848,
         "cpu_time": 0,
         "real_time": 0
       }
     },
     {
       "judger": "qoj_v2",
-      "judge_time": 35152875,
+      "judge_time": 28400625,
       "status": "Exited",
       "message": null,
       "exit_code": 0,
-      "signal": "10",
+      "signal": "0",
       "resource_usage": {
-        "memory": 0,
+        "memory": 25735168,
         "cpu_time": 0,
         "real_time": 0
       }
     },
     {
       "judger": "qoj_v2",
-      "judge_time": 4097625,
+      "judge_time": 29393292,
       "status": "Exited",
       "message": null,
       "exit_code": 0,
-      "signal": "10",
+      "signal": "0",
       "resource_usage": {
-        "memory": 0,
+        "memory": 25735168,
         "cpu_time": 0,
         "real_time": 0
       }
     },
     {
       "judger": "qoj_v2",
-      "judge_time": 3655375,
+      "judge_time": 9730916,
       "status": "Exited",
       "message": null,
       "exit_code": 0,
-      "signal": "10",
+      "signal": "0",
       "resource_usage": {
-        "memory": 0,
+        "memory": 25735168,
         "cpu_time": 0,
         "real_time": 0
       }
