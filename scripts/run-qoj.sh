@@ -8,51 +8,52 @@ function get_time_us() {
 
 # ================= Global Envs ===================
 ROOT="tests"
-EXAMPLE="long-loop"
+EXAMPLE="hello-world"
 VERSION="ac"
 # =================================================
 
-# # ====================== C ======================
-# TARGET_PATH="$ROOT/$EXAMPLE/$VERSION/c"
-# gcc $TARGET_PATH/main.c -o $TARGET_PATH/main.o
+# ====================== C ======================
+TARGET_PATH="$ROOT/$EXAMPLE/$VERSION/c"
+gcc $TARGET_PATH/main.c -o $TARGET_PATH/main.o
 
-# START_TIME=$(get_time_us)
-# sudo ./qingdao-judge/output/libjudger.so \
-#     --max_cpu_time=1000 \
-#     --max_real_time=2000 \
-#     --max_memory=10000000 \
-#     --max_process_number=200 \
-#     --max_output_size=134217728 \
-#     --exe_path="$TARGET_PATH/main.o" \
-#     --input_path="$ROOT/$EXAMPLE/testcases/1.in" \
-#     --output_path="$TARGET_PATH/1.out" \
-#     --error_path="$TARGET_PATH/1.error" \
-#     --log_path="$TARGET_PATH/1.log" \
-#     --uid=65534 \
-#     --gid=65534 \
-#     --seccomp_rule_name="c_cpp_file_io"
-# END_TIME=$(get_time_us)
-# echo "$((END_TIME - START_TIME))ms elapsed"
-# # =================================================
-
-# ===================== C++ =======================
-TARGET_PATH="$ROOT/$EXAMPLE/$VERSION/cpp"
-g++ $TARGET_PATH/main.cpp -o $TARGET_PATH/main.o
-sudo ./qingdao-judge/output/libjudger.so \
-    --max_cpu_time=10000000 \
-    --max_real_time=1000000000 \
-    --max_memory=10000000 \
+START_TIME=$(get_time_us)
+sudo ./qingdao-judger/output/libjudger.so \
+    --max_cpu_time=1000 \
+    --max_real_time=2000 \
+    --max_memory=100000000 \
     --max_process_number=200 \
     --max_output_size=134217728 \
     --exe_path="$TARGET_PATH/main.o" \
-    # --input_path="$ROOT/$EXAMPLE/testcases/1.in" \
     --output_path="$TARGET_PATH/1.out" \
     --error_path="$TARGET_PATH/1.error" \
     --log_path="$TARGET_PATH/1.log" \
-    --uid=0 \
-    --gid=0 
-    # \
-    # --seccomp_rule_name=""
+    --seccomp_rule_name="c_cpp_file_io"
+    #  --input_path="$ROOT/$EXAMPLE/testcases/1.in"
+END_TIME=$(get_time_us)
+echo "$((END_TIME - START_TIME))ms elapsed"
+# =================================================
+
+# ===================== C++ =======================
+# TARGET_PATH="$ROOT/$EXAMPLE/$VERSION/cpp"
+# g++ $TARGET_PATH/main.cpp -o $TARGET_PATH/main.o
+# START_TIME=$(get_time_us)
+# ./qingdao-judger/output/libjudger.so \
+#     --max_cpu_time=10 \
+#     --max_real_time=10 \
+#     --max_memory=10000000 \
+#     --max_process_number=200 \
+#     --max_output_size=134228 \
+#     --exe_path="$TARGET_PATH/main.o" \
+#     --output_path="$TARGET_PATH/1.out" \
+#     --error_path="$TARGET_PATH/1.error" \
+#     --log_path="$TARGET_PATH/1.log" \
+#     --uid=0 \
+#     --gid=0 
+#     # \
+#     # --seccomp_rule_name=""
+#        # --input_path="$ROOT/$EXAMPLE/testcases/1.in" \
+# END_TIME=$(get_time_us)
+# echo "$((END_TIME - START_TIME))ms elapsed"
 
 # ==== Python ====
 # sudo ./qingdao-judge/output/libjudger.so \
