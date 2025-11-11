@@ -1,14 +1,11 @@
 #!/bin/bash
 
 # =========================================================
-# strace 출력에서 고유한 시스템 호출 이름 추출
-#
-# 사용법: ./parse_syscall.sh ./your_program_name [program_args...]
-# 예시: ./parse_syscall.sh ls -l /
+# Extract unique syscall names from strace output
 # =========================================================
 if [ "$#" -eq 0 ]; then
-    echo "오류: 실행할 프로그램과 인자를 입력하세요." >&2
-    echo "사용법: $0 ./your_program_name [program_args...]" >&2
+    echo "Error: Enter your program to run and its arguments." >&2
+    echo "Usage: $0 ./trace-syscall.sh ./your_program_name [program_args...]" >&2
     exit 1
 fi
 
