@@ -1,0 +1,51 @@
+benchmark:
+    problem: malloc
+    submission: ac
+    language: c
+    iteration: 10
+environment:
+    os: linux/arm64 (ubuntu 24.04)
+    cpu: Apple Chip (8 Core)
+    memory: 9.7GB
+    timestamp: 2025-11-11T19:08:38.822558544Z
+summaries:
+    "1":
+        status:
+            qoj_v1: Exited
+            qoj_v2: Exited
+        memory:
+            qoj_v1:
+                avg: 0
+                max: 0
+                min: 0
+            qoj_v2:
+                avg: 0
+                max: 0
+                min: 0
+        cpu_time:
+            qoj_v1:
+                avg: 0
+                max: 0
+                min: 0
+            qoj_v2:
+                avg: 0
+                max: 0
+                min: 0
+        real_time:
+            qoj_v1:
+                avg: "0"
+                max: "0"
+                min: "0"
+            qoj_v2:
+                avg: "0"
+                max: "0"
+                min: "0"
+        judge_time:
+            qoj_v1:
+                avg: 2.825446ms
+                max: 3.867084ms
+                min: 2.385458ms
+            qoj_v2:
+                avg: 18.600054ms
+                max: 35.152875ms
+                min: 3.655375ms

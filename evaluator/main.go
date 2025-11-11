@@ -11,8 +11,6 @@ import (
 	"github.com/aintbe/code-goat/evaluator/utils"
 )
 
-const ITER_COUNT = 10
-
 func main() {
 	// Parse arguments to get the targeted benchmark.
 	benchmark := config.NewBenchmark()
@@ -29,21 +27,21 @@ func main() {
 
 	summaries := make(map[string]*summary.Summary)
 	results := make(utils.Serializable[[]*runner.JudgeResult])
-	resultsPerJudger := make([]*runner.JudgeResult, 0, ITER_COUNT)
+	resultsPerJudger := make([]*runner.JudgeResult, 0, benchmark.Iteration)
 
 	// Run submitted code for all testcases.
 	for _, tc := range testcases {
 		// Define a judge spec for the current testcase.
 		spec := config.NewJudgeSpec(benchmark, tc, profile)
 		summary := summary.NewSummary()
-		resultsPerTc := make([]*runner.JudgeResult, 0, ITER_COUNT*3)
+		resultsPerTc := make([]*runner.JudgeResult, 0, benchmark.Iteration*3)
 
 		// Run current testcase for all judgers.
 		for judger, run := range runner.Runner {
 			resultsPerJudger = resultsPerJudger[:0] // Reset
 
-			// Run a single testcase for `ITER_COUNT` times to get average result.
-			for i := 0; i < ITER_COUNT; i++ {
+			// Run a single testcase for configured times to get average result.
+			for i := 0; i < benchmark.Iteration; i++ {
 				result, err := run(spec)
 				if err != nil {
 					log.Printf("- [%s] %s\n", judger, err)

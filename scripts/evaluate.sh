@@ -3,9 +3,9 @@
 set -e
 
 # =================================
-PROBLEM="BOJ-20183"
+PROBLEM="malloc"
 SUBMISSION="ac"
-LANGUAGE="cpp"
+LANGUAGE="c"
 # ==================================
 
 # 1. Process arguments
@@ -84,4 +84,5 @@ sudo env "QOJ_LIBJUDGER_PATH=$WORKSPACE/qingdao-judger/output/libjudger.so" \
     go run . \
     --problem       $PROBLEM \
     --submission    $SUBMISSION \
-    --language      $LANGUAGE
+    --language      $LANGUAGE \
+    --iteration     10
