@@ -16,8 +16,8 @@ import (
 	"github.com/aintbe/code-goat/evaluator/config"
 )
 
-func RunCodeGoat(spec *config.RunSpec) (string, error) {
-    defer timeTrack(time.Now(), "code-goat1")
+func RunCodeGoat(spec *config.JudgeSpec) (*JudgeResult, error) {
+    startTime := time.Now()
 
     // Trace allocated memory inside C heap and free all of them before this 
     // function returns. This prevents memory leak after running.
@@ -42,7 +42,7 @@ func RunCodeGoat(spec *config.RunSpec) (string, error) {
     }
 
     // Convert Go Spec into C Spec to pass to Rust FFI function.
-    cSpec := C.CRunSpec{
+    cSpec := C.CJudgeSpec{
         exe_path: allocate(spec.ExePath),
         input_path: allocate(spec.InputPath),
         output_path: allocate(spec.OutputPath),
@@ -60,22 +60,11 @@ func RunCodeGoat(spec *config.RunSpec) (string, error) {
         },
     }
 
-    defer timeTrack(time.Now(), "code-goat2")
-
     // Call Rust FFI function to run judger.
     res := C.judger_judge(cSpec)
     
     // Copy returned result into Go heap and free Rust heap using provided function.
     defer C.judger_free(res)
 
-    a := C.GoString(res)
-
-    b, err := NewJudgeResult(a)
-    if err != nil {
-		fmt.Printf("\n%s\n", err)
-	}
-    fmt.Printf("%#v", b);
-    b.Printf()
-
-    return a, nil
+    return NewJudgeResult(C.GoString(res), CodeGoat, startTime)
 }

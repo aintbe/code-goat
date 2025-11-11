@@ -1,77 +1,87 @@
 package main
 
 import (
-	"encoding/json"
 	"fmt"
+	"log"
+	"time"
 
 	"github.com/aintbe/code-goat/evaluator/config"
 	"github.com/aintbe/code-goat/evaluator/runner"
+	"github.com/aintbe/code-goat/evaluator/summary"
+	"github.com/aintbe/code-goat/evaluator/utils"
 )
 
-// func timeTrack(start time.Time, name string) {
-// 	// 함수가 종료될 때까지 대기했다가 실행됨
-// 	elapsed := time.Since(start)
-// 	fmt.Printf("%s 실행 시간: %s\n", name, elapsed)
-// }
+const ITER_COUNT = 10
 
 func main() {
-	spec := config.NewRunSpec()
-	// fmt.Printf("%#v\n", spec)
+	// Parse arguments to get the targeted benchmark.
+	benchmark := config.NewBenchmark()
 
-	data1, err := runner.RunQingdao(spec);
+	// Check the configuration of the benchmark.
+	profile, err := config.NewProfile(benchmark)
 	if err != nil {
-		fmt.Printf("\n%s\n", err)
+		log.Fatalln(err)
+	}
+	testcases, err := config.FindTestcases(benchmark)
+	if err != nil {
+		log.Fatalln(err)
 	}
 
-	a, err := NewJudgeResult(data1)
-	if err != nil {
-		fmt.Printf("\n%s\n", err)
-	} else {
-		fmt.Printf("Qingdao:\n%#v\n", a)
-		fmt.Printf("%s\n\n", data1)
+	summaries := make(map[string]*summary.Summary)
+	results := make(utils.Serializable[[]*runner.JudgeResult])
+	resultsPerJudger := make([]*runner.JudgeResult, 0, ITER_COUNT)
+
+	// Run submitted code for all testcases.
+	for _, tc := range testcases {
+		// Define a judge spec for the current testcase.
+		spec := config.NewJudgeSpec(benchmark, tc, profile)
+		summary := summary.NewSummary()
+		resultsPerTc := make([]*runner.JudgeResult, 0, ITER_COUNT*3)
+
+		// Run current testcase for all judgers.
+		for judger, run := range runner.Runner {
+			resultsPerJudger = resultsPerJudger[:0] // Reset
+
+			// Run a single testcase for `ITER_COUNT` times to get average result.
+			for i := 0; i < ITER_COUNT; i++ {
+				result, err := run(spec)
+				if err != nil {
+					log.Printf("- [%s] %s\n", judger, err)
+				} else {
+					resultsPerJudger = append(resultsPerJudger, result)
+				}
+
+				// Release control long enough after each run so that we can
+				// check the worst case scenario in terms of judge time.
+				// CodeGoat would run quicker by tens of ms in an actual environment
+				// than it does in this evaluator system.
+				time.Sleep(10 * time.Millisecond)
+			}
+			summary.Add(resultsPerJudger)
+			resultsPerTc = append(resultsPerTc, resultsPerJudger...)
+		}
+
+		// Store results into map.
+		summaries[tc.Id] = summary
+		results[tc.Id] = resultsPerTc
 	}
-	
-	data2, err := runner.RunCodeGoat(spec);
-	if err != nil {
-		fmt.Printf("\n%s\n", err)
+
+	// Write generated reports into files.
+	reportName := fmt.Sprintf("%s/%s/%s/%s", benchmark.ReportDir, benchmark.Problem, benchmark.Language, benchmark.Submission)
+	evaluation := utils.Serializable[interface{}]{
+		"benchmark":   benchmark,
+		"environment": utils.GetEnvironment(),
+		"summaries":   summaries,
 	}
-	fmt.Printf("Code Goat:\n%s\n", data2)
-	// b, err := NewJudgeResult(data2)
-	// if err != nil {
-	// 	fmt.Printf("\n%s\n", err)
-	// } else {
-	// 	fmt.Printf("Code Goat:\n%#v\n", b)
-	// 	fmt.Printf("%s\n\n", data2)
-	// }
+	if err = evaluation.Dump(reportName, utils.YAML); err != nil {
+		log.Println(err)
+	}
+	if err = results.Dump(reportName, utils.JSON); err != nil {
+		log.Println(err)
+	}
 }
 
-type JudgeResult struct {
-	CpuTime    *int        `json:"cpuTime"`
-	RealTime   *int        `json:"realTime"`
-	Memory     *int        `json:"memory"`
-	Signal     *int        `json:"signal"`
-	ErrorCode  *int        `json:"exitCode"`
-	ExitCode   *int        `json:"errorCode"`
-	ResultCode *ResultCode `json:"resultCode"`
-}
-
-type ResultCode int8
-// libjudger의 정의값
-const ( // ResultCode
-	RUN_SUCCESS ResultCode = 0 + iota // this only means the process exited normally
-	CPU_TIME_LIMIT_EXCEEDED
-	REAL_TIME_LIMIT_EXCEEDED
-	MEMORY_LIMIT_EXCEEDED
-	RUNTIME_ERROR
-	SYSTEM_ERROR
-)
-
-func NewJudgeResult(jsonStr string) (JudgeResult, error) {
-	var judgeResult JudgeResult
-	
-	err := json.Unmarshal([]byte(jsonStr), &judgeResult)
-    if err != nil {
-        return judgeResult, fmt.Errorf("failed to unmarshal judge result: %w", err)
-    }
-	return judgeResult, nil
-}
+// todo:
+// - 점수 매기기
+// - seccomp
+// - log 정리

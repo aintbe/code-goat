@@ -18,8 +18,8 @@ typedef struct {
     const char *args;
     const char *envs;
     CResourceLimit resource_limit;
-} CRunSpec;
+} CJudgeSpec;
 
-char* judger_judge(CRunSpec spec);
+char* judger_judge(CJudgeSpec spec);
 
 void judger_free(char* return_value);

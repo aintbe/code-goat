@@ -2,19 +2,33 @@ package runner
 
 import (
 	"encoding/json"
-	"fmt"
 	"math/big"
-	"os"
-	"text/template"
+	"time"
+
+	"github.com/aintbe/code-goat/evaluator/utils"
 )
 
 type JudgeResult struct {
-	Status 			string			`json:"status"`
-	Message 		string			`json:"message"`
-	ExitCode 		int				`json:"exit_code"`
-	Signal			string			`json:"signal"`
-	ResourceUsage 	ResourceUsage	`json:"resource_usage"`
+	Judger			Judger			`json:"judger"`
+	JudgeTime		time.Duration	`json:"judge_time"`
+	Status 			JudgeStatus		`json:"status"`
+	Message 		*string			`json:"message"`
+	ExitCode 		*int			`json:"exit_code"`
+	Signal			*string			`json:"signal"`
+	ResourceUsage 	*ResourceUsage	`json:"resource_usage"`
 }
+
+type JudgeStatus string
+const (
+    Exited        			JudgeStatus = "Exited"
+    Accepted      			JudgeStatus = "Accepted"
+    WrongAnswer   			JudgeStatus = "WrongAnswer"
+    CpuTimeLimitExceeded 	JudgeStatus = "CpuTimeLimitExceeded"
+	RealTimeLimitExceeded	JudgeStatus = "RealTimeLimitExceeded"
+	MemoryLimitExceeded		JudgeStatus = "MemoryLimitExceeded"
+	RuntimeError			JudgeStatus = "RuntimeError"
+	InternalError			JudgeStatus = "InternalError"
+)
 
 type ResourceUsage struct {
 	Memory 		uint64	`json:"memory"`
@@ -22,34 +36,17 @@ type ResourceUsage struct {
     RealTime	big.Int	`json:"real_time"`
 }
 
-func (j *JudgeResult) Printf() {
-	const tmpl = `
-┌───────────┬─────────────────────────────────────────────────────┐
-│ Status    │ {{printf "%-51s" .Status}} │
-├───────────┼─────────────────────────────────────────────────────┤
-│ Exit Code │ {{printf "%-51d" .ExitCode}} │
-├───────────┼─────────────────────────────────────────────────────┤
-│ Signal    │ {{printf "%-51s" .Signal}} │
-├───────────┼─────────────────────────────────────────────────────┤
-│ Usage     │ Memory          │ Cpu Time        │ Real Time       │
-│           ├─────────────────┼─────────────────┼─────────────────┤
-│           │ {{printf "%-15d" .ResourceUsage.Memory}} │ {{printf "%-15d" .ResourceUsage.CpuTime}} │ {{printf "%-15d" .ResourceUsage.RealTime}} │
-└───────────┴─────────────────┴─────────────────┴─────────────────┘
-Message: {{.Message}}
-`
-	t, err := template.New("JudgeResult").Parse(tmpl)
-    if err != nil {
-        panic(err)
-    }
-    t.Execute(os.Stdout, j)
-}
+func NewJudgeResult(jsonStr string, judger Judger, startTime time.Time) (*JudgeResult, error) {
+	// Total time spent to run judger since execution
+	judgeTime := time.Since(startTime)
 
-func NewJudgeResult(jsonStr string) (JudgeResult, error) {
 	var judgeResult JudgeResult
-	
 	err := json.Unmarshal([]byte(jsonStr), &judgeResult)
     if err != nil {
-        return judgeResult, fmt.Errorf("failed to unmarshal judge result: %w", err)
+        return &judgeResult, utils.Error(err, "unmarshal", jsonStr)
     }
-	return judgeResult, nil
+
+	judgeResult.Judger = judger
+	judgeResult.JudgeTime = judgeTime
+	return &judgeResult, nil
 }
