@@ -20,14 +20,14 @@ func main() {
 	if err != nil {
 		log.Fatalln(err)
 	}
-	testcases, err := config.FindTestcases(benchmark)
+	testcases, err := config.FindTestCases(benchmark)
 	if err != nil {
 		log.Fatalln(err)
 	}
 
 	// Define containers for evaluation results.
 	summaries := make(map[string]*summary.Summary)
-	results := make(utils.Serializable[[]*runner.JudgeResult])
+	results := make(utils.Serializable[string, []*runner.JudgeResult])
 	resultsPerJudger := make([]*runner.JudgeResult, 0, benchmark.Iteration)
 
 	// Run submitted code for all testcases.
@@ -74,9 +74,9 @@ func main() {
 	)
 
 	// Write generated reports into files.
-	evaluation := utils.Serializable[interface{}]{
+	evaluation := utils.AutoSerializable{
 		"benchmark":   benchmark,
-		"environment": utils.GetEnvironment(),
+		"environment": utils.NewEnvironment(),
 		"summaries":   summaries,
 	}
 	if err = evaluation.Dump(reportName, utils.YAML); err != nil {

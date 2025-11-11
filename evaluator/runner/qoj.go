@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"math/big"
 	"os"
 	"os/exec"
 	"time"
@@ -47,12 +46,12 @@ func RunQoj(version qojVersion, s *config.JudgeSpec) (*JudgeResult, error) {
 	// Total time spent to run judger since execution
 	judgeTime := time.Since(startTime)
 
-	qojResult, err := NewQojJudgeResult(stdout.Bytes())
+	qojResult, err := newQojJudgeResult(stdout.Bytes())
 	if err != nil {
 		return &JudgeResult{}, err
 	}
 
-	return qojResult.Generalize(version, judgeTime)
+	return qojResult.generalize(version, judgeTime)
 }
 
 const (
@@ -119,7 +118,7 @@ var statusMap = map[int]JudgeStatus{
 	5: InternalError,
 }
 
-func NewQojJudgeResult(jsonBytes []byte) (*qojJudgeResult, error) {
+func newQojJudgeResult(jsonBytes []byte) (*qojJudgeResult, error) {
 	var judgeResult qojJudgeResult
 
 	err := json.Unmarshal(jsonBytes, &judgeResult)
@@ -129,7 +128,7 @@ func NewQojJudgeResult(jsonBytes []byte) (*qojJudgeResult, error) {
 	return &judgeResult, nil
 }
 
-func (q *qojJudgeResult) Generalize(version qojVersion, judgeTime time.Duration) (*JudgeResult, error) {
+func (q *qojJudgeResult) generalize(version qojVersion, judgeTime time.Duration) (*JudgeResult, error) {
 	signal := fmt.Sprint(q.Signal)
 
 	return &JudgeResult{
@@ -141,8 +140,8 @@ func (q *qojJudgeResult) Generalize(version qojVersion, judgeTime time.Duration)
 		Signal:    &signal,
 		ResourceUsage: &ResourceUsage{
 			Memory:   uint64(q.Memory),
-			CpuTime:  int64(q.CpuTime),
-			RealTime: *big.NewInt(int64(q.RealTime)),
+			CpuTime:  uint32(q.CpuTime),
+			RealTime: uint32(q.RealTime),
 		},
 	}, nil
 }

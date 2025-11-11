@@ -9,5 +9,5 @@ func Error(err error, operation, data string) error {
 	return fmt.Errorf(`failed to %s: %w
 >>>
 %s
-<<<`, operation, err, data)	
+<<<`, operation, err, data)
 }

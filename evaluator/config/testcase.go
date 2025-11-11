@@ -13,7 +13,7 @@ type TestCase struct {
 	HasInput bool
 }
 
-func FindTestcases(b *Benchmark) ([]*TestCase, error) {
+func FindTestCases(b *Benchmark) ([]*TestCase, error) {
 	dirPath := fmt.Sprintf("%s/%s/testcases", b.testDir, b.Problem)
 
 	entries, err := os.ReadDir(dirPath)

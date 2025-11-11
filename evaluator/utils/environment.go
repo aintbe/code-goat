@@ -3,7 +3,6 @@ package utils
 import (
 	"fmt"
 	"runtime"
-	"time"
 
 	"github.com/pbnjay/memory"
 	"github.com/shirou/gopsutil/v3/cpu"
@@ -11,13 +10,13 @@ import (
 )
 
 type Environment struct {
-	Os        string    `yaml:"os"`
-	Cpu       string    `yaml:"cpu"`
-	Memory    string    `yaml:"memory"`
-	Timestamp time.Time `yaml:"timestamp"`
+	Os        string `yaml:"os"`
+	Cpu       string `yaml:"cpu"`
+	CoreCount uint8  `yaml:"core_count"`
+	Memory    string `yaml:"memory"`
 }
 
-func GetEnvironment() Environment {
+func NewEnvironment() Environment {
 	os := fmt.Sprintf("%s/%s", runtime.GOOS, runtime.GOARCH)
 	hostInfo, err := host.Info()
 	if err == nil {
@@ -25,9 +24,9 @@ func GetEnvironment() Environment {
 	}
 
 	return Environment{
-		Timestamp: time.Now(),
 		Os:        os,
 		Cpu:       getCpuModel(),
+		CoreCount: uint8(runtime.NumCPU()),
 		Memory:    fmt.Sprintf("%.1fGB", float64(memory.TotalMemory())/(1024*1024*1024)),
 	}
 }
@@ -42,5 +41,5 @@ func getCpuModel() string {
 	if modelName == "" {
 		modelName = "Chip"
 	}
-	return fmt.Sprintf("%s %s (%d Core)", info[0].VendorID, modelName, runtime.NumCPU())
+	return fmt.Sprintf("%s %s", info[0].VendorID, modelName)
 }
