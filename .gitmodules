@@ -1,3 +1,6 @@
 [submodule "qingdao-judger"]
 	path = qingdao-judger
 	url = https://github.com/QingdaoU/Judger.git
+[submodule "qingdao-judger-v2"]
+	path = qingdao-judger-v2
+	url = https://github.com/skkuding/Judger.git
