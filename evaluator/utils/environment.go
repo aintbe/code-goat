@@ -11,10 +11,10 @@ import (
 )
 
 type Environment struct {
-	Os      	string 		`yaml:"os"`
-	Cpu      	string 		`yaml:"cpu"`
-	Memory   	string 		`yaml:"memory"`
-    Timestamp 	time.Time	`yaml:"timestamp"`
+	Os        string    `yaml:"os"`
+	Cpu       string    `yaml:"cpu"`
+	Memory    string    `yaml:"memory"`
+	Timestamp time.Time `yaml:"timestamp"`
 }
 
 func GetEnvironment() Environment {
@@ -25,19 +25,19 @@ func GetEnvironment() Environment {
 	}
 
 	return Environment{
-        Timestamp: time.Now(),
-		Os:       os,
-		Cpu:      getCpuModel(),
-		Memory: fmt.Sprintf("%.1fGB", float64(memory.TotalMemory()) / (1024 * 1024 * 1024)),
+		Timestamp: time.Now(),
+		Os:        os,
+		Cpu:       getCpuModel(),
+		Memory:    fmt.Sprintf("%.1fGB", float64(memory.TotalMemory())/(1024*1024*1024)),
 	}
 }
 
 func getCpuModel() string {
-    info, err := cpu.Info()
-    if err != nil || len(info) <= 0 {
-        return "Unknown"
-    }
-	
+	info, err := cpu.Info()
+	if err != nil || len(info) <= 0 {
+		return "Unknown"
+	}
+
 	modelName := info[0].ModelName
 	if modelName == "" {
 		modelName = "Chip"
