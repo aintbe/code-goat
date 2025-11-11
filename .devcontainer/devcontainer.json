@@ -1,12 +1,8 @@
 {
   "name": "judger",
-  "build": {
-    "dockerfile": "Dockerfile"
-  },
-  "runArgs": ["--cgroupns=host"],
-  "mounts": [
-    "source=/sys/fs/cgroup,target=/sys/fs/cgroup,type=bind,consistency=consistent"
-  ],
+  "dockerComposeFile": "docker-compose.yml",
+  "service": "code-goat-dev",
+  "workspaceFolder": "/workspace",
   "customizations": {
     "vscode": {
       "settings": {
@@ -16,8 +12,10 @@
         "EditorConfig.EditorConfig",
         "ms-python.python",
         "rust-lang.rust-analyzer",
-        "GitHub.copilot"
+        "GitHub.copilot",
+        "golang.go"
       ]
     }
-  }
+  },
+  "remoteUser": "vscode"
 }

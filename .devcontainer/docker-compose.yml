@@ -1,0 +1,17 @@
+services:
+  code-goat-dev:
+    container_name: code-goat-dev
+    image: code-goat-dev-ubuntu
+    build:
+      context: .
+      dockerfile: Dockerfile
+    volumes:
+      - ..:/workspace:cached
+      - /sys/fs/cgroup:/sys/fs/cgroup:rw
+    cgroup: host
+    stdin_open: true
+    tty: true
+    environment:
+      - RUST_LOG=INFO
+      - SANDBOX_WORKSPACE=/workspace/code-goat
+      - LD_LIBRARY_PATH=/usr/local/lib:$LD_LIBRARY_PATH
