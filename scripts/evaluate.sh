@@ -3,10 +3,9 @@
 set -e
 
 # =================================
-EXAMPLE="long-loop"
-VERSION="ac"
+PROBLEM="BOJ-20183"
+SUBMISSION="ac"
 LANGUAGE="cpp"
-TESTCASE=1
 # ==================================
 
 # 1. Process arguments
@@ -40,7 +39,7 @@ done
 
 # 2. Set up test environments
 WORKSPACE=$(readlink -f "$(dirname $0)/..")
-TEST_PATH="$WORKSPACE/tests/$EXAMPLE/$VERSION/$LANGUAGE"
+TEST_PATH="$WORKSPACE/tests/$PROBLEM/$SUBMISSION/$LANGUAGE"
 
 # 3. Perform building libjudger.so if requested
 if [ $BUILD_FLAG -eq 1 ]; then
@@ -77,32 +76,12 @@ if [ "$COMPILE_FLAG" -eq 1 ] || [ ! -f "$TEST_PATH/main" ]; then
     esac
 fi
 
-# 5. Adjust input & output arguments based on existing files
-INPUT_PATH="$WORKSPACE/tests/$EXAMPLE/testcases/$TESTCASE.in"
-if [ ! -f "$INPUT_PATH" ]; then
-    INPUT_PATH=""
-fi
-
-ANSWER_PATH="$WORKSPACE/tests/$EXAMPLE/testcases/$TESTCASE.out"
-if [ "$GRADE_FLAG" -eq 0 ] || [ ! -f "$ANSWER_PATH" ]; then
-    ANSWER_PATH=""
-fi
-
-# 4. Run CLI program to run judgers and evaluate results
+# 5. Run CLI program to run judgers and evaluate results
 cd $WORKSPACE/evaluator
-sudo env "LD_LIBRARY_PATH=/usr/local/lib:$LD_LIBRARY_PATH" go run . \
-    --exe-path          "$TEST_PATH/main" \
-    --input-path        "$INPUT_PATH" \
-    --output-path       "$TEST_PATH/$TESTCASE.out" \
-    --error-path        "$TEST_PATH/$TESTCASE.error" \
-    --answer-path       "$ANSWER_PATH" \
-    --args              "" \
-    --args              "" \
-    --envs              "" \
-    --envs              "" \
-    --memory-limit      100000000 \
-    --cpu-time-limit    1000 \
-    --real-time-limit   2000 \
-    --stack-limit       0 \
-    --n-process-limit   0 \
-    --output-limit      100000000
+sudo env "QOJ_LIBJUDGER_PATH=$WORKSPACE/qingdao-judger/output/libjudger.so" \
+    "QOJ_LIBJUDGER_V2_PATH=$WORKSPACE/qingdao-judger-v2/output/libjudger.so" \
+    "CONTAINER_ID=9f20c17da8cf2a75750fee824e83b634f9cdffcac0eb1eae736dc30b420f7f76" \
+    go run . \
+    --problem       $PROBLEM \
+    --submission    $SUBMISSION \
+    --language      $LANGUAGE
