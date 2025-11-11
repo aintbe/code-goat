@@ -25,6 +25,7 @@ func main() {
 		log.Fatalln(err)
 	}
 
+	// Define containers for evaluation results.
 	summaries := make(map[string]*summary.Summary)
 	results := make(utils.Serializable[[]*runner.JudgeResult])
 	resultsPerJudger := make([]*runner.JudgeResult, 0, benchmark.Iteration)
@@ -64,8 +65,15 @@ func main() {
 		results[tc.Id] = resultsPerTc
 	}
 
+	reportName := fmt.Sprintf(
+		"%s/%s/%s/%s",
+		benchmark.ReportDir,
+		benchmark.Problem,
+		benchmark.Language,
+		benchmark.Submission,
+	)
+
 	// Write generated reports into files.
-	reportName := fmt.Sprintf("%s/%s/%s/%s", benchmark.ReportDir, benchmark.Problem, benchmark.Language, benchmark.Submission)
 	evaluation := utils.Serializable[interface{}]{
 		"benchmark":   benchmark,
 		"environment": utils.GetEnvironment(),

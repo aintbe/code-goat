@@ -2,7 +2,6 @@ package utils
 
 import (
 	"encoding/json"
-	"fmt"
 	"os"
 	"path/filepath"
 
@@ -33,9 +32,8 @@ func (s Serializable[T]) Dump(fileName string, ext extension) error {
 	}
 
 	filePath := fileName + string(ext)
-
 	if err := os.MkdirAll(filepath.Dir(filePath), 0755); err != nil {
-		return fmt.Errorf("디렉터리 생성 실패: %w", err)
+		return Error(err, "create directories", "")
 	}
 	if err = os.WriteFile(filePath, bytes, 0644); err != nil {
 		return Error(err, "write into file", "")
