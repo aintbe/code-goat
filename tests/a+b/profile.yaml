@@ -1,0 +1,7 @@
+limits:
+  memory: 100000000   # Peak memory usage in bytes.
+  cpu_time: 100000    # CPU time used in milliseconds.
+  real_time: 200000   # Real time used in milliseconds.
+  stack: 0            # Upper limit to stack size in bytes.
+  n_process: 0        # Maximum number of process.
+  output: 100000000   # Upper limit to output size in bytes.
