@@ -8,16 +8,17 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-type Serializable[T any] map[string]T
+type Serializable[K string, V any] map[K]V
+type AutoSerializable = Serializable[string, interface{}]
 
-type extension string
+type Extension string
 
 const (
-	YAML extension = ".yaml"
-	JSON extension = ".json"
+	YAML Extension = ".yaml"
+	JSON Extension = ".json"
 )
 
-func (s Serializable[T]) Dump(fileName string, ext extension) error {
+func (s Serializable[K, T]) Dump(fileName string, ext Extension) error {
 	var bytes []byte
 	var err error
 
