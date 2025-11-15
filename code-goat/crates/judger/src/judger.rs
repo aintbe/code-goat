@@ -118,47 +118,6 @@ fn try_judge(spec: &RunSpec) -> Result<JudgeResult, InternalError> {
     }
 }
 
-struct TimeoutGuard {
-    handle: Option<JoinHandle<bool>>,
-    runner_exit_tx: Sender<bool>,
-}
-
-impl TimeoutGuard {
-    fn new(runner_pid: Pid, limit: u32) -> Self {
-        let (runner_exit_tx, runner_exit_rx) = mpsc::channel();
-
-        let timeout = (limit + 1).into();
-        let handle = thread::spawn(move || {
-            runner_exit_rx
-                // If child process exits before timeout, stop waiting.
-                .recv_timeout(Duration::from_millis(timeout))
-                // If timeout occurs, kill the runner process.
-                .is_err_and(|_| {
-                    info!("Kill runner process due to timeout.");
-                    signal::kill(runner_pid, SIGKILL).is_ok()
-                })
-        });
-
-        Self {
-            handle: Some(handle),
-            runner_exit_tx,
-        }
-    }
-}
-
-impl Drop for TimeoutGuard {
-    fn drop(&mut self) {
-        if let Ok(_) = self.runner_exit_tx.send(true) {
-            info!("Canceled timeout guard.");
-        }
-        if let Some(handle) = self.handle.take() {
-            if let Ok(_) = handle.join() {
-                info!("Reaped timeout guard.");
-            }
-        }
-    }
-}
-
 /// Calculate the amount of resources used by runner process.
 fn get_resource_usage(
     cg_sandbox: CgroupSandbox,

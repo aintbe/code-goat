@@ -1,7 +1,11 @@
+pub(crate) mod seccomp;
+
 use std::{
     cmp, env,
-    io::{PipeReader, PipeWriter},
-    ops::Add,
+    ops::{Add, Div},
+    sync::mpsc::{self, Sender},
+    thread::{self, JoinHandle},
+    time::{Duration, Instant},
 };
 
 use cgroups_rs::{
@@ -11,34 +15,30 @@ use cgroups_rs::{
         memory::MemController,
     },
 };
-use libseccomp::{ScmpAction, ScmpFilterContext, ScmpSyscall, error::SeccompError};
-use log::error;
+use log::{debug, error, info};
 use nix::{
     mount::{self, MsFlags},
-    sched::{self, CloneFlags},
     sys::{
         resource::{self, Resource},
-        signal::Signal,
+        signal::{self, Signal},
     },
     unistd::{self, Pid},
 };
 
-use crate::{
-    runner,
-    spec::{InternalError, ResourceLimit, RunSpec},
-};
+use crate::models::{InternalError, ResourceLimit};
 
-const MEGA_BYTE: u64 = 1_000_000;
+const MEBI_BYTE: u32 = 1 << 10 << 10;
+const MEGA_BYTE: u32 = 1000 * 1000;
 
-pub struct CgroupSandbox {
+pub(crate) struct CgroupSandbox {
     inner: Cgroup,
 }
 
 impl CgroupSandbox {
-    pub fn new(resource_limit: &ResourceLimit) -> Result<CgroupSandbox, InternalError> {
-        const CGROUP_NAME: &str = "code-goat";
+    const CGROUP_NAME: &str = "code-goat";
 
-        let builder = CgroupBuilder::new(CGROUP_NAME)
+    pub(crate) fn new(resource_limit: &ResourceLimit) -> Result<CgroupSandbox, InternalError> {
+        let builder = CgroupBuilder::new(Self::CGROUP_NAME)
             // Forces processes in this cgroup to use CPU up to 100%.
             .cpu()
             .period(100 * 1000)
@@ -50,7 +50,10 @@ impl CgroupSandbox {
 
         let cgroup = if let Some(limit) = resource_limit.memory {
             // Limit memory usage if specified.
-            builder.memory_hard_limit(limit.add(16 * MEGA_BYTE as u32).into())
+            builder.memory_hard_limit(
+                // Add margin of 4MiB to detect MLE.
+                limit.add(4 * MEBI_BYTE).into(),
+            )
         } else {
             builder
         }
@@ -62,14 +65,14 @@ impl CgroupSandbox {
         Ok(CgroupSandbox { inner: cgroup })
     }
 
-    pub fn add_process(&self, pid: Pid) -> Result<(), InternalError> {
+    pub(crate) fn add_process(&self, pid: Pid) -> Result<(), InternalError> {
         let cgroup_pid = CgroupPid::from(pid.as_raw() as u64);
         self.inner
             .add_task_by_tgid(cgroup_pid)
             .map_err(InternalError::AddToCgroup)
     }
 
-    pub fn read_memory_usage(&self) -> Result<u64, InternalError> {
+    pub(crate) fn read_memory_usage(&self) -> Result<u64, InternalError> {
         let controller = self
             .inner
             .controller_of::<MemController>()
@@ -78,7 +81,7 @@ impl CgroupSandbox {
         Ok(controller.memory_stat().max_usage_in_bytes)
     }
 
-    pub fn read_cpu_time_usage(&self) -> Result<u64, InternalError> {
+    pub(crate) fn read_cpu_time_usage(&self) -> Result<u32, InternalError> {
         let cpu = self
             .inner
             .controller_of::<CpuController>()
@@ -93,7 +96,7 @@ impl CgroupSandbox {
             .split_whitespace()
             .collect();
 
-        let cpu_time_in_us: u64 = cpu_stat
+        let cpu_time_in_us: u32 = cpu_stat
             .get(1)
             .ok_or(InternalError::ReadCgroupCpuStats)?
             .parse()
@@ -107,45 +110,53 @@ impl Drop for CgroupSandbox {
     fn drop(&mut self) {
         if let Err(e) = self.inner.delete() {
             error!("Failed to delete cgroup: {:?}", e);
+            return;
         }
     }
 }
 
-/// Clone a new process with specified namespaces.
-/// Returns the PID of the cloned process.
-pub fn clone_runner(
-    spec: &RunSpec,
-    setup_rx: PipeReader,
-    abort_tx: PipeWriter,
-) -> Result<Pid, InternalError> {
-    let runner = {
-        Box::new(|| match runner::run(&spec, &setup_rx, &abort_tx) {
-            Ok(status) => status,
-            Err(e) => e as isize,
-        })
-    };
+pub(crate) struct TimeSandbox {
+    handle: Option<JoinHandle<bool>>,
+    runner_exit_tx: Sender<bool>,
+}
 
-    // `unistd::clone` requires a stack pointer, so we allocate the stack
-    // on the heap. However, since a new stack is allocated again when
-    // `unistd::execv` is executed after specifying the stack during clone,
-    // we only have to allocate a stack large enough for the child process.
-    const STACK_SIZE: usize = 1024 * 1024; // 1MB
-    let mut stack = vec![0u8; STACK_SIZE].into_boxed_slice();
+impl TimeSandbox {
+    pub(crate) fn new(runner_pid: Pid, limit: u32) -> Self {
+        let (runner_exit_tx, runner_exit_rx) = mpsc::channel();
+        let handle = thread::spawn(move || {
+            runner_exit_rx
+                // If runner process exits before timeout, [`Drop`] will send
+                // a message to this channel to stop waiting.
+                .recv_timeout(Duration::from_millis(calculate_timeout(limit)))
+                // If timeout occurs, kill the runner process.
+                .is_err_and(|_| {
+                    info!("Kill runner process due to timeout.");
+                    signal::kill(runner_pid, Signal::SIGKILL).is_ok()
+                })
+        });
 
-    let flags = CloneFlags::CLONE_NEWUSER
-        | CloneFlags::CLONE_NEWPID
-        | CloneFlags::CLONE_NEWNS
-        | CloneFlags::CLONE_NEWUTS;
+        Self {
+            handle: Some(handle),
+            runner_exit_tx,
+        }
+    }
+}
 
-    // Let parent notified when cloned process is terminated.
-    let signal = Some(Signal::SIGCHLD as i32);
-
-    // Return the PID of the cloned process.
-    unsafe { sched::clone(runner, &mut stack, flags, signal) }.map_err(InternalError::Clone)
+impl Drop for TimeSandbox {
+    fn drop(&mut self) {
+        if let Ok(_) = self.runner_exit_tx.send(true) {
+            info!("Runner process exited before timeout; Cancel timeout killer.");
+        }
+        if let Some(handle) = self.handle.take() {
+            if let Ok(_) = handle.join() {
+                debug!("Reaped time sandbox.");
+            }
+        }
+    }
 }
 
 /// Mount runner process into a safe mount namespace.
-pub fn mount_sandbox() -> Result<(), nix::Error> {
+pub(crate) fn mount_sandbox() -> Result<(), nix::Error> {
     // Make mount namespace private to avoid affecting the host system.
     mount::mount(
         None::<&str>,
@@ -198,70 +209,36 @@ pub fn mount_sandbox() -> Result<(), nix::Error> {
 }
 
 /// Set resource limits to the sandbox. Memory usage is not limited here
-/// because the work is done by `CgroupSandbox`. Add extra bytes/time to
-/// limit to avoid `RuntimeError` that cannot be traced.
-pub fn limit_sandbox(resource_limit: &ResourceLimit) -> Result<(), nix::Error> {
+/// because the work is done by [`CgroupSandbox`]. Add extra bytes/time to
+/// limit to avoid `JudgeStatus::RuntimeError` that cannot be traced.
+pub(crate) fn set_limit_to_sandbox(resource_limit: &ResourceLimit) -> Result<(), nix::Error> {
     if let Some(limit_ms) = resource_limit.cpu_time {
-        let margin = cmp::max(limit_ms / 10, 1); // 10% or 1ms
-        let limit = limit_ms.add(margin) / 1000;
-        resource::setrlimit(Resource::RLIMIT_CPU, limit, limit)?;
+        let limit_s = calculate_timeout(limit_ms) / 1000;
+        resource::setrlimit(Resource::RLIMIT_CPU, limit_s, limit_s)?;
     };
 
     if let Some(limit) = resource_limit.n_process {
+        let limit = limit.into();
         resource::setrlimit(Resource::RLIMIT_NPROC, limit, limit)?;
     };
 
     if let Some(limit) = resource_limit.stack {
-        let limit = limit.add(16 * MEGA_BYTE);
+        let limit = limit.add(4 * MEBI_BYTE).into();
         resource::setrlimit(Resource::RLIMIT_STACK, limit, limit)?;
     };
 
     if let Some(limit) = resource_limit.output {
-        let limit = limit.add(1 * MEGA_BYTE);
+        let limit = limit.add(1 * MEGA_BYTE).into();
         resource::setrlimit(Resource::RLIMIT_FSIZE, limit, limit)?;
     };
 
     Ok(())
 }
 
-/// Apply seccomp whitelist.
-/// TODO: more comment
-pub fn apply_seccomp() -> Result<(), SeccompError> {
-    const WHITELIST: [&str; 26] = [
-        "access",
-        "arch_prctl",
-        "brk",
-        "clock_gettime",
-        "close",
-        "execve",
-        "exit_group",
-        "faccessat",
-        "fstat",
-        "futex",
-        "getrandom",
-        "lseek",
-        "mmap",
-        "mprotect",
-        "munmap",
-        "newfstatat",
-        "open",
-        "openat",
-        "prlimit64",
-        "read",
-        "readlink",
-        "readlinkat",
-        "rseq",
-        "set_robust_list",
-        "set_tid_address",
-        "write",
-    ];
-
-    // Kill process if the runner provokes any syscall not whitelisted.
-    let mut filter = ScmpFilterContext::new(ScmpAction::KillProcess)?;
-    for syscall_name in WHITELIST {
-        let syscall = ScmpSyscall::from_name(syscall_name)?;
-        filter.add_rule(ScmpAction::Allow, syscall)?;
-    }
-
-    filter.load()
+fn calculate_timeout<T>(limit: T) -> u64
+where
+    T: Copy + Ord + Div<Output = T> + From<u8> + Add<Output = T> + Into<u64>,
+{
+    let margin = cmp::max(limit / T::from(20), T::from(1)); // 5% or 1ms
+    (limit + margin).into()
 }
