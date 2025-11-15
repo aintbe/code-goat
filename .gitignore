@@ -1,6 +1,10 @@
 .DS_Store
 target/
+scripts/tools/env/
 
 # Test output files
 tests/*/*/*/*
 !tests/*/*/*/main.*
+
+# Do not commit scraped data
+tests/boj-*/*
