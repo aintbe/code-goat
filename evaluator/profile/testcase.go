@@ -1,4 +1,4 @@
-package config
+package profile
 
 import (
 	"fmt"
@@ -13,8 +13,8 @@ type TestCase struct {
 	HasInput bool
 }
 
-func FindTestCases(b *Benchmark) ([]*TestCase, error) {
-	dirPath := fmt.Sprintf("%s/%s/testcases", b.testDir, b.Problem)
+func LoadTestCases(b *Benchmark) ([]*TestCase, error) {
+	dirPath := fmt.Sprintf("%s/%s/testcases", b.TestDir, b.Problem)
 
 	entries, err := os.ReadDir(dirPath)
 	if err != nil {
@@ -23,9 +23,9 @@ func FindTestCases(b *Benchmark) ([]*TestCase, error) {
 
 	testcaseMap := make(map[string]bool)
 	for _, entry := range entries {
-		parts := strings.Split(entry.Name(), ".")
-		if len(parts) == 2 {
-			id, ext := parts[0], parts[1]
+		tokens := strings.Split(entry.Name(), ".")
+		if len(tokens) == 2 {
+			id, ext := tokens[0], tokens[1]
 
 			// Store testcase and mark if input file is found for it
 			hasInput, ok := testcaseMap[id]
