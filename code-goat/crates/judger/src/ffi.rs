@@ -1,39 +1,47 @@
-use std::ffi::{CStr, CString, c_char, c_int, c_uint, c_ulonglong};
+use std::ffi::{CStr, CString, c_char, c_int, c_uchar, c_uint, c_ulonglong};
+use std::time::Instant;
 
-use crate::judger;
-use crate::spec::{JudgeResult, JudgeStatus, ResourceLimit, RunSpec};
+use log::info;
+use nix::libc::c_ushort;
+
+use crate::logger::LoggerError;
+use crate::models::{JudgeResult, JudgeSpec, JudgeStatus, ResourceLimit, U63};
+use crate::sandbox::seccomp::ScmpPolicy;
+use crate::{judger, logger};
 
 #[repr(C)]
-pub struct CRunSpec {
+pub struct CJudgeSpec {
     pub exe_path: *const c_char,
     pub input_path: *const c_char,
+    pub answer_path: *const c_char,
     pub output_path: *const c_char,
     pub error_path: *const c_char,
-    pub answer_path: *const c_char,
+    /// Elements in `args` and `envs` should be separated by " ".
     pub args: *const c_char,
     pub envs: *const c_char,
+    pub scmp_policy: c_uchar,
     pub resource_limit: CResourceLimit,
 }
 
 #[repr(C)]
 pub struct CResourceLimit {
-    pub memory: c_uint,
-    pub cpu_time: c_ulonglong,
+    pub memory: c_ulonglong,
+    pub cpu_time: c_uint,
     pub real_time: c_uint,
-    pub stack: c_ulonglong,
-    pub n_process: c_ulonglong,
-    pub output: c_ulonglong,
+    pub stack: c_uint,
+    pub n_process: c_ushort,
+    pub output: c_uint,
 }
 
 impl From<CResourceLimit> for ResourceLimit {
-    fn from(resource_limit: CResourceLimit) -> Self {
+    fn from(limit: CResourceLimit) -> Self {
         Self {
-            memory: wrap_number(resource_limit.memory),
-            cpu_time: wrap_number(resource_limit.cpu_time),
-            real_time: wrap_number(resource_limit.real_time),
-            stack: wrap_number(resource_limit.stack),
-            n_process: wrap_number(resource_limit.n_process),
-            output: wrap_number(resource_limit.output),
+            memory: wrap_number(U63::new(limit.memory)),
+            cpu_time: wrap_number(limit.cpu_time),
+            real_time: wrap_number(limit.real_time),
+            stack: wrap_number(limit.stack),
+            n_process: wrap_number(limit.n_process),
+            output: wrap_number(limit.output),
         }
     }
 }
@@ -50,7 +58,7 @@ where
 }
 
 #[unsafe(no_mangle)]
-pub extern "C" fn judger_judge(spec: CRunSpec) -> *mut c_char {
+pub extern "C" fn judger_judge(spec: CJudgeSpec) -> *mut c_char {
     let generate_error = |message: String| JudgeResult {
         status: JudgeStatus::InternalError,
         message: Some(message),
@@ -70,16 +78,16 @@ pub extern "C" fn judger_judge(spec: CRunSpec) -> *mut c_char {
         .into_raw()
 }
 
-fn parse<'a>(cspec: CRunSpec) -> Result<RunSpec, &'a str> {
+fn parse<'a>(cspec: CJudgeSpec) -> Result<JudgeSpec, &'a str> {
     let exe_path = {
         let source = parse_str("exe_path", cspec.exe_path)?;
         CString::new(source).map_err(|_| "exe_path")
     }?;
 
     let input_path = parse_optional_str("input_path", cspec.input_path)?;
+    let answer_path = parse_optional_str("answer_path", cspec.answer_path)?;
     let output_path = parse_optional_str("output_path", cspec.output_path)?;
     let error_path = parse_optional_str("error_path", cspec.error_path)?;
-    let answer_path = parse_optional_str("answer_path", cspec.answer_path)?;
 
     let args = parse_cstr_array("args", cspec.args)?;
     let envs = parse_cstr_array("envs", cspec.envs)?;
@@ -87,9 +95,9 @@ fn parse<'a>(cspec: CRunSpec) -> Result<RunSpec, &'a str> {
     return Ok(RunSpec::from_cstr(
         exe_path,
         input_path,
+        answer_path,
         output_path,
         error_path,
-        answer_path,
         args,
         envs,
         ResourceLimit::from(cspec.resource_limit),
@@ -130,8 +138,8 @@ fn parse_cstr_array(key: &str, array: *const c_char) -> Result<Vec<CString>, &st
     if !err_args.is_empty() {
         return Err(key);
     }
-    // `.unwrap()` will not panic since all Err's are filtered out.
-    Ok(ok_args.into_iter().map(Result::unwrap).collect())
+    // `unwrap` will not panic since all Err's are filtered out.
+    Ok(ok_args.into_iter().map(Result::unwrap_or_default).collect())
 }
 
 #[unsafe(no_mangle)]
@@ -140,13 +148,13 @@ pub extern "C" fn judger_free(return_value: *mut c_char) {
         return;
     }
     // Retrieve ownership of returned value. When this function ends,
-    // `Drop` is called and the memory will be reaped.
+    // [`Drop`] is called and the memory will be reaped.
     let _ = unsafe { CString::from_raw(return_value) };
 }
 
 ////
 /// ### Examples
-/// ```ignore (extern-declaration)
+/// ```c
 /// int res = c_grade_output(...);
 /// if (res < 0) { printf("Error Occured"); }
 /// else if (res == 0) { printf("Wrong Answer"); }

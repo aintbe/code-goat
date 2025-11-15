@@ -1,18 +1,13 @@
 use std::{
-    fs::{self},
+    fs,
     io::{self, Read},
-    sync::mpsc::{self, Sender},
-    thread::{self, JoinHandle},
     time::{Duration, Instant},
 };
 
 use log::{error, info};
 use nix::{
-    sys::{
-        signal::{self, Signal::SIGKILL},
-        wait::{self, WaitStatus},
-    },
-    unistd::{self, Pid},
+    sys::wait::{self, WaitStatus},
+    unistd,
 };
 
 use crate::{
@@ -38,7 +33,7 @@ pub fn judge(spec: JudgeSpec) -> JudgeResult {
 /// The main judging logic.
 /// It sets up the sandbox to run the untrusted code, monitors its
 /// execution, and collects resource usage.
-fn try_judge(spec: &RunSpec) -> Result<JudgeResult, InternalError> {
+fn try_judge(spec: &JudgeSpec) -> Result<JudgeResult, InternalError> {
     let cg_sandbox = CgroupSandbox::new(&spec.resource_limit)?;
     let (setup_rx, setup_tx) = io::pipe()?;
     let (mut abort_rx, abort_tx) = io::pipe()?;
@@ -50,11 +45,11 @@ fn try_judge(spec: &RunSpec) -> Result<JudgeResult, InternalError> {
 
     // Prevent the runner process from running longer than specified limit.
     // Its scope (and thus its drop execution) is intentionally extended
-    // to judger's lifetime so that judger can reap it with `drop`.
-    let _timeout_guard = spec
+    // to judger's lifetime so that judger can reap it with [`Drop`].
+    let _timeout_sandbox = spec
         .resource_limit
         .real_time
-        .map(|limit| TimeoutGuard::new(runner_pid, limit));
+        .map(|limit| TimeSandbox::new(runner_pid, limit));
 
     match unistd::write(&setup_tx, b"1") {
         Ok(_) => info!("Judger finished setting sandbox; notifying runner to resume..."),
@@ -79,7 +74,7 @@ fn try_judge(spec: &RunSpec) -> Result<JudgeResult, InternalError> {
                 return Ok(JudgeResult {
                     status: JudgeStatus::InternalError,
                     message: Some(aborted_message),
-                    exit_code: None,
+                    exit_code: Some(exit_code),
                     signal: None,
                     resource_usage: None,
                 });
@@ -125,23 +120,29 @@ fn get_resource_usage(
 ) -> Result<ResourceUsage, InternalError> {
     let memory = cg_sandbox.read_memory_usage()?;
     let cpu_time = cg_sandbox.read_cpu_time_usage()?;
+    let real_time = duration
+        .as_millis()
+        // `try_into` never fails because it is impossible for judger
+        // to run longer than the range of u32. (u32::MAX ms ≈ 0.1 year)
+        .try_into()
+        .unwrap_or(u32::MAX);
 
-    Ok(ResourceUsage::new(memory, cpu_time, duration.as_millis()))
+    Ok(ResourceUsage::new(memory, cpu_time, real_time))
 }
 
 /// Determine the judge status based on resource usage.
 fn get_judge_status(
-    spec: &RunSpec,
+    spec: &JudgeSpec,
     resource_usage: &ResourceUsage,
     default_status: JudgeStatus,
 ) -> Result<JudgeStatus, InternalError> {
     if let Some(limit) = spec.resource_limit.cpu_time
         && resource_usage.cpu_time > 0
-        && (resource_usage.cpu_time as u64) > limit
+        && resource_usage.cpu_time > limit
     {
         Ok(JudgeStatus::CpuTimeLimitExceeded)
     } else if let Some(limit) = spec.resource_limit.real_time
-        && resource_usage.real_time > limit.into()
+        && resource_usage.real_time > limit
     {
         Ok(JudgeStatus::RealTimeLimitExceeded)
     } else if let Some(limit) = spec.resource_limit.memory
@@ -149,12 +150,9 @@ fn get_judge_status(
     {
         Ok(JudgeStatus::MemoryLimitExceeded)
     } else if default_status == JudgeStatus::Exited
-        && spec.output_path.is_some()
-        && spec.answer_path.is_some()
+        && let Some(output) = &spec.output_path
+        && let Some(answer) = &spec.answer_path
     {
-        let output = &spec.output_path.clone().unwrap();
-        let answer = &spec.answer_path.clone().unwrap();
-
         is_accepted(output, answer).map(|accepted| {
             if accepted {
                 JudgeStatus::Accepted
