@@ -5,13 +5,12 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
+    env_file:
+      - .env
     volumes:
       - ..:/workspace:cached
       - /sys/fs/cgroup:/sys/fs/cgroup:rw
     cgroup: host
     stdin_open: true
     tty: true
-    environment:
-      - RUST_LOG=INFO
-      - SANDBOX_WORKSPACE=/workspace/code-goat
-      - LD_LIBRARY_PATH=/usr/local/lib:$LD_LIBRARY_PATH
+    privileged: ${IS_PRIVILEGED:-false}
