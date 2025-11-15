@@ -205,6 +205,7 @@ mod tests {
 
         use log::error;
 
+        /// Contains test data to be cleaned up after tests.
         struct TestData {
             log_path: String,
         }
@@ -235,7 +236,7 @@ mod tests {
             let log = "LOG_CONTENT".to_string();
             error!("{}", log);
 
-            let content = fs::read_to_string(&data.log_path).unwrap();
+            let content = fs::read_to_string(&data.log_path).expect("Failed to read test.log");
             assert!(content.contains(&log));
         }
 
@@ -246,15 +247,16 @@ mod tests {
             let data2 = TestData::new("test2.log");
             let log2 = "LOG_CONTENT_2".to_string();
 
-            configure_logger(&Some(data1.log_path.clone())).unwrap();
+            configure_logger(&Some(data1.log_path.clone()))
+                .expect("Failed to configure first logger");
             error!("{}", log1);
 
             let second_config = configure_logger(&Some(data2.log_path.clone()));
             error!("{}", log2);
             assert!(second_config.is_ok());
 
-            let content1 = fs::read_to_string(&data1.log_path).unwrap();
-            let content2 = fs::read_to_string(&data2.log_path).unwrap();
+            let content1 = fs::read_to_string(&data1.log_path).expect("Failed to read test1.log");
+            let content2 = fs::read_to_string(&data2.log_path).expect("Failed to read test2.log");
 
             assert!(content1.contains(&log1));
             assert!(!content1.contains(&log2));
