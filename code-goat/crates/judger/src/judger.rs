@@ -16,12 +16,13 @@ use nix::{
 };
 
 use crate::{
-    sandbox::{self, CgroupSandbox},
-    spec::{InternalError, JudgeResult, JudgeStatus, ResourceUsage, RunSpec},
+    models::{InternalError, JudgeResult, JudgeSpec, JudgeStatus, ResourceUsage},
+    runner,
+    sandbox::{CgroupSandbox, TimeSandbox},
 };
 
 /// The entry point for judging a submission.
-pub fn judge(spec: RunSpec) -> JudgeResult {
+pub fn judge(spec: JudgeSpec) -> JudgeResult {
     match try_judge(&spec) {
         Ok(result) => result,
         Err(e) => JudgeResult {
@@ -43,7 +44,8 @@ fn try_judge(spec: &RunSpec) -> Result<JudgeResult, InternalError> {
     let (mut abort_rx, abort_tx) = io::pipe()?;
 
     // Clone a runner process in a new user namespace.
-    let runner_pid = sandbox::clone_runner(spec, setup_rx, abort_tx)?;
+    let runner_pid = runner::clone(spec, setup_rx, abort_tx)?;
+
     cg_sandbox.add_process(runner_pid)?;
 
     // Prevent the runner process from running longer than specified limit.

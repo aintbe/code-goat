@@ -4,19 +4,56 @@ use std::{
 };
 
 use libseccomp::error::SeccompErrno;
-use log::error;
-use nix::unistd;
+use log::{error, info};
+use nix::{
+    sched::{self, CloneFlags},
+    sys::signal::Signal,
+    unistd::{self, Pid},
+};
 
 use crate::{
-    sandbox::{self},
-    spec::RunSpec,
+    models::{InternalError, JudgeSpec},
+    sandbox::{self, seccomp},
 };
+
+/// Clone a new process with specified namespaces.
+/// Returns the PID of the cloned process.
+pub fn clone(
+    spec: &JudgeSpec,
+    setup_rx: PipeReader,
+    abort_tx: PipeWriter,
+) -> Result<Pid, InternalError> {
+    let runner = {
+        Box::new(|| match run(&spec, &setup_rx, &abort_tx) {
+            Ok(status) => status,
+            Err(e) => e as isize,
+        })
+    };
+
+    // `unistd::clone` requires a stack pointer, so we allocate the stack
+    // on the heap. However, since a new stack is allocated again when
+    // `unistd::execv` is executed after specifying the stack during clone,
+    // we only have to allocate a stack large enough for the child process.
+    const STACK_SIZE: usize = 1024 * 1024; // 1MB
+    let mut stack = vec![0u8; STACK_SIZE].into_boxed_slice();
+
+    let flags = CloneFlags::CLONE_NEWUSER
+        | CloneFlags::CLONE_NEWPID
+        | CloneFlags::CLONE_NEWNS
+        | CloneFlags::CLONE_NEWUTS;
+
+    // Let parent notified when cloned process is terminated.
+    let signal = Some(Signal::SIGCHLD as i32);
+
+    // Return the PID of the cloned process.
+    unsafe { sched::clone(runner, &mut stack, flags, signal) }.map_err(InternalError::Clone)
+}
 
 /// The function executed in the cloned child process.
 /// Run the untrusted code in an isolated environment
 /// and return the exit status.
-pub fn run(
-    spec: &RunSpec,
+fn run(
+    spec: &JudgeSpec,
     setup_rx: &PipeReader,
     abort_tx: &PipeWriter,
 ) -> Result<isize, nix::Error> {
@@ -58,19 +95,17 @@ pub fn run(
     }
 
     // Run the untrusted code in a sandboxed environment.
-    unistd::execve(&spec.exe_path, &spec.args, &spec.envs)?;
-
-    // Return an error if execve fails.
-    Err(nix::Error::UnknownErrno)
+    let Err(e) = unistd::execve(&spec.exe_path, &spec.args, &spec.envs);
+    return abort(e, &format!("Failed to execute spec {:#?}.", &spec));
 }
 
 struct RedirectError {
-    pub source: nix::Error,
-    pub context: String,
+    source: nix::Error,
+    context: String,
 }
 
 impl RedirectError {
-    pub fn from_io_error(io_error: std::io::Error, action: &str, file_path: &str) -> Self {
+    fn from_io_error(io_error: std::io::Error, action: &str, file_path: &str) -> Self {
         let source = match io_error.kind() {
             ErrorKind::NotFound => nix::Error::ENOENT,
             ErrorKind::PermissionDenied => nix::Error::EACCES,
@@ -89,7 +124,7 @@ impl RedirectError {
         }
     }
 
-    pub fn from_errno(errno: nix::Error, fd: &str) -> Self {
+    fn from_errno(errno: nix::Error, fd: &str) -> Self {
         Self {
             source: errno,
             context: format!("Failed to redirect {}", fd),
@@ -97,8 +132,8 @@ impl RedirectError {
     }
 }
 
-/// Redirect stdin, stdout, stderr according to the RunSpec.
-fn redirect<'a>(spec: &'a RunSpec) -> Result<(), RedirectError> {
+/// Redirect stdin, stdout, stderr according to the JudgeSpec.
+fn redirect<'a>(spec: &'a JudgeSpec) -> Result<(), RedirectError> {
     if let Some(path) = &spec.input_path {
         let f_in =
             File::open(path.clone()).map_err(|e| RedirectError::from_io_error(e, "open", &path))?;
