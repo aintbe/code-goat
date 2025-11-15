@@ -14,8 +14,8 @@ type AutoSerializable = Serializable[string, interface{}]
 type Extension string
 
 const (
-	YAML Extension = ".yaml"
-	JSON Extension = ".json"
+	Yaml Extension = ".yaml"
+	Json Extension = ".json"
 )
 
 func (s Serializable[K, T]) Dump(fileName string, ext Extension) error {
@@ -23,9 +23,9 @@ func (s Serializable[K, T]) Dump(fileName string, ext Extension) error {
 	var err error
 
 	switch ext {
-	case YAML:
+	case Yaml:
 		bytes, err = yaml.Marshal(s)
-	case JSON:
+	case Json:
 		bytes, err = json.MarshalIndent(s, "", "  ")
 	}
 	if err != nil {
