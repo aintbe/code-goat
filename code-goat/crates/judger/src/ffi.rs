@@ -171,3 +171,24 @@ pub extern "C" fn judger_grade_output(
         Err(_) => return -1,
     }
 }
+
+#[unsafe(no_mangle)]
+pub extern "C" fn judger_configure_logger(log_path: *const c_char) -> c_int {
+    let path = parse_optional_str("log_path", log_path);
+    let result = match path {
+        Ok(path) => logger::configure_logger(&path),
+        Err(_) => return 1,
+    };
+
+    match result {
+        Ok(_) => 0,
+        Err(e) => match e {
+            LoggerError::File(_) => 2,
+            LoggerError::Dup(_) => 3,
+            LoggerError::Register => 4,
+            LoggerError::Subscribe(_) => 5,
+            LoggerError::Reload(_) => 6,
+            LoggerError::Disable => 7,
+        },
+    }
+}
