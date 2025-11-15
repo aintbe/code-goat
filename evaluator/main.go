@@ -5,45 +5,50 @@ import (
 	"log"
 	"time"
 
-	"github.com/aintbe/code-goat/evaluator/config"
-	"github.com/aintbe/code-goat/evaluator/runner"
-	"github.com/aintbe/code-goat/evaluator/summary"
+	"github.com/aintbe/code-goat/evaluator/adapter"
+	"github.com/aintbe/code-goat/evaluator/eval"
+	"github.com/aintbe/code-goat/evaluator/profile"
 	"github.com/aintbe/code-goat/evaluator/utils"
 )
 
 func main() {
 	// Parse arguments to get the targeted benchmark.
-	benchmark := config.NewBenchmark()
+	benchmark := profile.LoadBenchmark()
 
 	// Check the configuration of the benchmark.
-	profile, err := config.NewProfile(benchmark)
+	config, err := profile.LoadConfig(benchmark)
 	if err != nil {
 		log.Fatalln(err)
 	}
-	testcases, err := config.FindTestCases(benchmark)
+	testcases, err := profile.LoadTestCases(benchmark)
 	if err != nil {
 		log.Fatalln(err)
 	}
 
-	// Define containers for evaluation results.
-	summaries := make(map[string]*summary.Summary)
-	results := make(utils.Serializable[string, []*runner.JudgeResult])
-	resultsPerJudger := make([]*runner.JudgeResult, 0, benchmark.Iteration)
+	// Define collections of evaluation results.
+	results := make(utils.Serializable[string, []*adapter.JudgeResult])
+	resultsPerJudger := make([]*adapter.JudgeResult, 0, benchmark.Iteration)
+	evaluations := make(map[string]*eval.Evaluation)
 
 	// Run submitted code for all testcases.
 	for _, tc := range testcases {
-		// Define a judge spec for the current testcase.
-		spec := config.NewJudgeSpec(benchmark, tc, profile)
-		summary := summary.NewSummary()
-		resultsPerTc := make([]*runner.JudgeResult, 0, benchmark.Iteration*3)
+		spec, err := profile.NewJudgeSpec(benchmark, tc, config)
+		if err != nil {
+			log.Println(err) // Do not stop the entire evaluation.
+			continue
+		}
+
+		evaluation := eval.NewEvaluation()
+		resultsPerTc := make([]*adapter.JudgeResult, 0, benchmark.Iteration*3)
 
 		// Run current testcase for all judgers.
-		for judger, run := range runner.Runner {
+		for judger, runJudger := range adapter.JudgerAdapter {
 			resultsPerJudger = resultsPerJudger[:0] // Reset
 
 			// Run a single testcase for configured times to get average result.
 			for i := 0; i < benchmark.Iteration; i++ {
-				result, err := run(spec)
+				result, err := runJudger(spec)
+
 				if err != nil {
 					log.Printf("- [%s] %s\n", judger, err)
 				} else {
@@ -56,12 +61,12 @@ func main() {
 				// than it does in this evaluator system.
 				time.Sleep(10 * time.Millisecond)
 			}
-			summary.Add(resultsPerJudger)
+			evaluation.Add(resultsPerJudger)
 			resultsPerTc = append(resultsPerTc, resultsPerJudger...)
 		}
 
-		// Store results into map.
-		summaries[tc.Id] = summary
+		// Store outputs into map.
+		evaluations[tc.Id] = evaluation
 		results[tc.Id] = resultsPerTc
 	}
 
@@ -73,21 +78,24 @@ func main() {
 		benchmark.Submission,
 	)
 
-	// Write generated reports into files.
+	// Write generated evaluations and results into files.
 	evaluation := utils.AutoSerializable{
 		"benchmark":   benchmark,
 		"environment": utils.NewEnvironment(),
-		"summaries":   summaries,
+		"limits":      config.ResourceLimit,
+		"tests":       evaluations,
 	}
-	if err = evaluation.Dump(reportName, utils.YAML); err != nil {
+	if err = evaluation.Dump(reportName, utils.Yaml); err != nil {
 		log.Println(err)
 	}
-	if err = results.Dump(reportName, utils.JSON); err != nil {
+	if err = results.Dump(reportName, utils.Json); err != nil {
 		log.Println(err)
 	}
 }
 
 // todo:
-// - 점수 매기기
-// - seccomp
-// - log 정리
+// - 점수 매기기 v
+// - 결과 정확한지 확인하기 (status, time, memory 등)
+// - seccomp - java,
+// - seccomp - python running (일단 python 먼저)
+// v - log 정리, 자녀도 그대로 로깅 가능한지 확인하기
