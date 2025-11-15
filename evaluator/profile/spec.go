@@ -26,7 +26,7 @@ func NewJudgeSpec(b *Benchmark, t *TestCase, c *Config) (*JudgeSpec, error) {
 		return nil, err
 	}
 
-	targetDir := fmt.Sprintf("%s/%s/%s/%s/", b.TestDir, b.Problem, b.Submission, b.Language)
+	targetDir := b.GetTargetDir()
 	return &JudgeSpec{
 		InputPath:      inputPath,
 		ExpectedOutput: expectedOutput,

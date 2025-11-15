@@ -1,8 +1,10 @@
-package summary
+package eval
 
 import (
 	"time"
 
+	"github.com/aintbe/code-goat/evaluator/constants"
+	"github.com/aintbe/code-goat/evaluator/types"
 	"github.com/aintbe/code-goat/evaluator/utils"
 	"gopkg.in/yaml.v3"
 )
@@ -15,13 +17,13 @@ type stat[T statType] struct {
 }
 
 type statType interface {
-	utils.ByteSize | time.Duration
+	types.ByteSize | time.Duration
 }
 
 func (s *stat[T]) Update(value any) {
 	switch v := value.(type) {
 	case uint64:
-		s := any(s).(*stat[utils.ByteSize])
+		s := any(s).(*stat[types.ByteSize])
 		s.sum.B += v
 		if s.Max.B < v {
 			s.Max.B = v
@@ -32,7 +34,7 @@ func (s *stat[T]) Update(value any) {
 
 	case uint32:
 		s := any(s).(*stat[time.Duration])
-		updateDuration(s, time.Duration(v))
+		updateDuration(s, time.Duration(v*constants.MS_TO_NS))
 
 	case time.Duration:
 		s := any(s).(*stat[time.Duration])
@@ -52,9 +54,9 @@ func updateDuration(s *stat[time.Duration], value time.Duration) {
 
 func (s *stat[T]) Finalize(count int) *stat[T] {
 	switch sum := any(s.sum).(type) {
-	case utils.ByteSize:
+	case types.ByteSize:
 		avg := sum.B / uint64(count)
-		s.Avg = any(utils.ByteSize{B: avg}).(T)
+		s.Avg = any(types.ByteSize{B: avg}).(T)
 
 	case time.Duration:
 		s.Avg = any(sum / time.Duration(count)).(T)
