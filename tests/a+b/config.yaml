@@ -1,4 +1,4 @@
-limits:
+limit:
   memory: 100000000   # Peak memory usage in bytes.
   cpu_time: 100000    # CPU time used in milliseconds.
   real_time: 200000   # Real time used in milliseconds.
