@@ -1,0 +1,63 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    types: [opened, edited, synchronize, reopened]
+  workflow_call:
+
+jobs:
+  config:
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.read.outputs.matrix }}
+    steps:
+      - uses: actions/checkout@v4
+      
+      - id: read
+        run: |
+          # Remove comments and trailing commas for valid JSON parsing
+          MATRIX_JSON=$(jq -c . .github/platforms.json)
+          
+          echo "matrix=$MATRIX_JSON" >> $GITHUB_OUTPUT
+
+  build:
+    name: Build (${{ matrix.name }})
+    runs-on: ${{ matrix.workflow_runner }}
+    
+    needs: config
+    strategy:
+      fail-fast: false
+      matrix:
+        include: ${{ fromJson(needs.config.outputs.matrix) }}
+    
+    steps:
+      - uses: .github/rust/action.yaml
+        with:
+          target: ${{ matrix.rustup_target }}
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: code-goat-${{ matrix.name }}
+          path: ./code-goat/target/${{ matrix.rustup_target }}/release/libjudger.so
+
+  test:
+    name: Test (${{ matrix.name }})
+    runs-on: ${{ matrix.workflow_runner }}
+    
+    needs: config
+    strategy:
+      fail-fast: false
+      matrix:
+        include: ${{ fromJson(needs.config.outputs.matrix) }}
+    
+    steps:
+      - uses: .github/rust/action.yaml
+        with:
+          target: ${{ matrix.rustup_target }}
+      
+      - name: Run tests
+        working-directory: ./code-goat
+        run: |
+          cargo test --target ${{ matrix.rustup_target }} --package judger

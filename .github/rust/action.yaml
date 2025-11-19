@@ -1,0 +1,21 @@
+name: Rust Setup
+
+inputs:
+  target:
+    description: "Rust Target Architecture"
+    required: true
+
+runs:
+  using: composite
+  steps:
+    - uses: actions/checkout@v4
+
+    - uses: dtolnay/rust-toolchain@stable
+      with:
+        targets: ${{ inputs.target }}
+
+    - name: Install dependencies
+      shell: bash
+      run: |
+        apt-get update
+        apt-get install -y libseccomp-dev

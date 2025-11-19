@@ -1,0 +1,12 @@
+[
+    {
+        "name": "linux-amd64",
+        "workflow_runner": "ubuntu-24.04",
+        "rustup_target": "x86_64-unknown-linux-gnu"
+    },
+    {
+        "name": "linux-arm64",
+        "workflow_runner": "ubuntu-24.04-arm",
+        "rustup_target": "aarch64-unknown-linux-gnu"
+    }
+]
