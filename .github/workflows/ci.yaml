@@ -33,14 +33,20 @@ jobs:
         include: ${{ fromJson(needs.config.outputs.matrix) }}
     
     steps:
-      - uses: .github/rust/action.yaml
+      - uses: actions/checkout@v4
+      - uses: ./.github/rust
         with:
           target: ${{ matrix.rustup_target }}
+
+      - name: Build Library
+        working-directory: ./code-goat
+        run: |
+          cargo build --release --package judger --target ${{ matrix.rustup_target }}
 
       - uses: actions/upload-artifact@v4
         with:
           name: code-goat-${{ matrix.name }}
-          path: ./code-goat/target/${{ matrix.rustup_target }}/release/libjudger.so
+          path: ./target/${{ matrix.rustup_target }}/release/libjudger.so
 
   test:
     name: Test (${{ matrix.name }})
@@ -53,7 +59,8 @@ jobs:
         include: ${{ fromJson(needs.config.outputs.matrix) }}
     
     steps:
-      - uses: .github/rust/action.yaml
+      - uses: actions/checkout@v4
+      - uses: ./.github/rust
         with:
           target: ${{ matrix.rustup_target }}
       
