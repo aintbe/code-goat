@@ -1,0 +1,43 @@
+on:
+  push:
+    branches: [main]
+  pull_request:
+    types: [opened, edited, synchronize, reopened]
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: linux-amd64
+            os: ubuntu-24.04
+            rustup_target: x86_64-unknown-linux-gnu
+          
+          - name: linux-arm64
+            os: ubuntu-24.04-arm
+            rustup_target: aarch64-unknown-linux-gnu
+    
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - uses: actions/checkout@v4
+      
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          target: ${{ matrix.rustup_target }}
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libseccomp-dev
+
+      - name: Build project
+        working-directory: ./code-goat
+        run: |
+          cargo build --release --target ${{ matrix.rustup_target }} -p judger
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: code-goat-${{ matrix.name }}
+          path: ./target/${{ matrix.rustup_target }}/release/libjudger.so
