@@ -73,19 +73,21 @@ jobs:
       - name: Run tests
         working-directory: ./code-goat
         run: |
-          # Run all tests except mount-related tests
+          # Run all tests that do not require privileged access.
           cargo test --package code_goat --target ${{ matrix.rustup_target }} \
             -- --skip sandbox::tests::mount_sandbox
       
-      - name: Run mount-related tests
+      - name: Run privileged tests
+        working-directory: ./code-goat
         run: |
-          # Mount operation tests require special privileges, so we should run them 
-          # separately and with elevated privileges. Also, we need to lose connections
-          # to the host namespaces to perform mount operations in GitHub Actions.
+          findmnt -o TARGET,PROPAGATION /
+          # It seems like GitHub Actions runners maintain some connections 
+          # to a host volume that prevent us from making the root mount private. 
+          # As a workaround, we should unmount from the host. Since we cannot use 
+          # `mount` operation without `sudo`, we run the test command with it as well.
           sudo mount --make-rprivate /
           sudo env "PATH=$PATH" \
             "RUSTUP_HOME=$HOME/.rustup" \
-            "CARGO_HOME=$HOME/.cargo" \
             "RUST_BACKTRACE=full" \
             cargo test --package code_goat --target ${{ matrix.rustup_target }} \
               -- sandbox::tests::mount_sandbox
