@@ -14,3 +14,6 @@ services:
     stdin_open: true
     tty: true
     privileged: ${IS_PRIVILEGED:-false}
+    security_opt:
+      - seccomp=unconfined
+      - apparmor=unconfined

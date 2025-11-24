@@ -19,7 +19,8 @@ jobs:
           sparse-checkout: .github/platforms.json
           sparse-checkout-cone: false
       
-      - id: read
+      - name: Read Platform Configuration
+        id: read
         run: |
           # Remove comments and trailing commas for valid JSON parsing
           MATRIX_JSON=$(jq -c . .github/platforms.json)
