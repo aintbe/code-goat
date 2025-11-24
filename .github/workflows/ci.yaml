@@ -66,14 +66,29 @@ jobs:
     
     steps:
       - uses: actions/checkout@v4
-      
-      - name: Run tests in Dev Container
-        uses: devcontainers/ci@v0.3
+      - uses: ./.github/rust
         with:
-          subFolder: .
-          runCmd: |
-            set -ex
+          target: ${{ matrix.rustup_target }}
+      
+      # - name: Run tests in Dev Container
+      #   uses: devcontainers/ci@v0.3
+      #   with:
+      #     subFolder: .
+      #     runCmd: |
+      #       set -ex
 
-            # mount --bind / /
-            cd ./code-goat
-            RUST_BACKTRACE=full cargo test --package code_goat --target ${{ matrix.rustup_target }}
+      #       # mount --bind / /
+      #       cd ./code-goat
+      #       RUST_BACKTRACE=full cargo test --package code_goat --target ${{ matrix.rustup_target }}
+
+      - name: Make root private
+        run: sudo mount --make-rprivate /
+      
+      - name: Run tests on Host VM
+        working-directory: ./code-goat
+        run: |
+          sudo env "PATH=$PATH" \
+            "RUSTUP_HOME=$HOME/.rustup" \
+            "CARGO_HOME=$HOME/.cargo" \
+            "RUST_BACKTRACE=full" \
+            cargo test --package code_goat --target ${{ matrix.rustup_target }}

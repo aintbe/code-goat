@@ -199,15 +199,6 @@ const SENSITIVE_DIRS: [&str; 11] = [
 
 /// Mount runner process into a safe mount namespace.
 pub(crate) fn mount_sandbox() -> Result<(), Infallible> {
-    mount::mount(
-        Some("/"),
-        "/",
-        None::<&str>,
-        MsFlags::MS_BIND | MsFlags::MS_REC,
-        None::<&str>,
-    )
-    .expect("??????");
-
     // Make mount namespace private to avoid affecting the host system.
     mount::mount(
         None::<&str>,
