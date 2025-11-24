@@ -4,7 +4,7 @@ use std::{
 };
 
 use libseccomp::error::SeccompErrno;
-use log::{error, info};
+use log::error;
 use nix::{
     sched::{self, CloneFlags},
     sys::signal::Signal,
@@ -61,37 +61,37 @@ fn run(
     // Judger will collect the message and handle this request as a
     // `JudgeStatus::InternalError`.
     let abort = |e: nix::Error, message: &str| {
-        let _ = unistd::write(&abort_tx, message.to_string().as_bytes());
+        let _ = unistd::write(&abort_tx, message.as_bytes());
 
-        error!("{}", message);
-        error!("Aborting runner...");
+        error!("{}; aborting runner...", message);
         Err(e)
     };
 
     if let Err(e) = sandbox::mount_sandbox() {
         return abort(e, "Failed to mount user namespace");
     }
-    if let Err(e) = sandbox::limit_sandbox(&spec.resource_limit) {
+
+    if let Err(e) = sandbox::set_limit_to_sandbox(&spec.resource_limit) {
         return abort(e, "Failed to set resource limit");
     }
+
     if let Err(e) = redirect(spec) {
         return abort(e.source, &e.context);
     }
 
-    // Wait until judger set up cgroups and timeout handler.
-    let mut done_setup = [0u8; 1];
-    if let Err(e) = unistd::read(setup_rx, &mut done_setup) {
-        return abort(e, "Failed to get notified");
-    }
-
     // Apply seccomp right before `execve` so that runner can provoke
     // prohibited syscalls while creating the sandbox environment.
-    if let Err(e) = sandbox::apply_seccomp() {
+    if let Err(e) = seccomp::apply_filter(&spec.scmp_policy, &spec.exe_path) {
         let errno = e.errno().unwrap_or(SeccompErrno::EFAULT);
         return abort(
             nix::Error::from_raw(errno as i32),
             "Failed to apply secure computing mode",
         );
+    }
+
+    // Wait until judger set up cgroups and timeout handler.
+    if let Err(e) = unistd::read(setup_rx, &mut [0u8; 1]) {
+        return abort(e, "Failed to get notified");
     }
 
     // Run the untrusted code in a sandboxed environment.

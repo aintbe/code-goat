@@ -1,14 +1,11 @@
 use std::{
     fs,
-    io::{self, Read},
+    io::{self, Read, Write},
     time::{Duration, Instant},
 };
 
 use log::{error, info};
-use nix::{
-    sys::wait::{self, WaitStatus},
-    unistd,
-};
+use nix::sys::wait::{self, WaitStatus};
 
 use crate::{
     models::{InternalError, JudgeResult, JudgeSpec, JudgeStatus, ResourceUsage},
@@ -35,12 +32,14 @@ pub fn judge(spec: JudgeSpec) -> JudgeResult {
 /// execution, and collects resource usage.
 fn try_judge(spec: &JudgeSpec) -> Result<JudgeResult, InternalError> {
     let cg_sandbox = CgroupSandbox::new(&spec.resource_limit)?;
-    let (setup_rx, setup_tx) = io::pipe()?;
+    let (setup_rx, mut setup_tx) = io::pipe()?;
     let (mut abort_rx, abort_tx) = io::pipe()?;
 
     // Clone a runner process in a new user namespace.
     let runner_pid = runner::clone(spec, setup_rx, abort_tx)?;
+    info!("Cloned runner process with PID {}", runner_pid);
 
+    // Apply cgroup sandbox to the runner process.
     cg_sandbox.add_process(runner_pid)?;
 
     // Prevent the runner process from running longer than specified limit.
@@ -51,15 +50,15 @@ fn try_judge(spec: &JudgeSpec) -> Result<JudgeResult, InternalError> {
         .real_time
         .map(|limit| TimeSandbox::new(runner_pid, limit));
 
-    match unistd::write(&setup_tx, b"1") {
+    match setup_tx.write(b"1") {
         Ok(_) => info!("Judger finished setting sandbox; notifying runner to resume..."),
-        Err(nix::Error::EPIPE) => {
-            error!("Read end is closed due to runnner's abortion; waiting to reap it...");
+        Err(e) if e.kind() == io::ErrorKind::BrokenPipe => {
+            error!("Judger was unable to finish set-up due to runnner's abortion.");
         }
         Err(e) => return Err(InternalError::Notify(e)),
     };
 
-    // Capture the start time of runner after wait time.
+    // Capture the start time of runner after set-up.
     let runner_clock = Instant::now();
 
     match wait::waitpid(runner_pid, None) {
@@ -70,7 +69,7 @@ fn try_judge(spec: &JudgeSpec) -> Result<JudgeResult, InternalError> {
             // If so, respond with an `JudgeStatus::InternalError`.
             let mut aborted_message = String::new();
             let _ = abort_rx.read_to_string(&mut aborted_message);
-            if aborted_message.len() > 0 {
+            if !aborted_message.is_empty() {
                 return Ok(JudgeResult {
                     status: JudgeStatus::InternalError,
                     message: Some(aborted_message),
@@ -79,6 +78,16 @@ fn try_judge(spec: &JudgeSpec) -> Result<JudgeResult, InternalError> {
                     resource_usage: None,
                 });
             };
+
+            if exit_code != 0 {
+                return Ok(JudgeResult {
+                    status: JudgeStatus::RuntimeError,
+                    message: Some("Runner exited with non-zero exit code.".to_string()),
+                    exit_code: Some(exit_code),
+                    signal: None,
+                    resource_usage: None,
+                });
+            }
 
             // Parse judge status and resource usage.
             let resource_usage = get_resource_usage(cg_sandbox, runner_duration)?;
@@ -96,8 +105,6 @@ fn try_judge(spec: &JudgeSpec) -> Result<JudgeResult, InternalError> {
             let runner_duration = runner_clock.elapsed();
             let resource_usage = get_resource_usage(cg_sandbox, runner_duration)?;
             let status = get_judge_status(&spec, &resource_usage, JudgeStatus::RuntimeError)?;
-
-            info!("what the ... {:?} {:?}", resource_usage, status);
 
             Ok(JudgeResult {
                 status,
