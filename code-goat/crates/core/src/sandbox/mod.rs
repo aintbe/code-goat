@@ -3,6 +3,7 @@ pub(crate) mod seccomp;
 use std::{
     cmp, env,
     ops::{Add, Div},
+    path::Path,
     sync::mpsc::{self, Sender},
     thread::{self, JoinHandle},
     time::{Duration, Instant},
@@ -51,8 +52,8 @@ impl CgroupSandbox {
         let cgroup = if let Some(limit) = resource_limit.memory {
             // Limit memory usage if specified.
             builder.memory_hard_limit(
-                // Add margin of 4MiB to detect MLE.
-                limit.add(4 * MEBI_BYTE).into(),
+                // Add margin of 1MiB to detect MLE.
+                limit.saturating_add(MEBI_BYTE).into(),
             )
         } else {
             builder
@@ -66,10 +67,19 @@ impl CgroupSandbox {
     }
 
     pub(crate) fn add_process(&self, pid: Pid) -> Result<(), InternalError> {
+        // TODO: delete clocks here after testing.
+        let clock = Instant::now();
+
         let cgroup_pid = CgroupPid::from(pid.as_raw() as u64);
-        self.inner
+        let res = self
+            .inner
             .add_task_by_tgid(cgroup_pid)
-            .map_err(InternalError::AddToCgroup)
+            .map_err(InternalError::AddToCgroup);
+
+        let duration = clock.elapsed();
+        debug!("Duration to add process to cgroup: {:?}", duration);
+
+        res
     }
 
     pub(crate) fn read_memory_usage(&self) -> Result<u64, InternalError> {
@@ -100,7 +110,7 @@ impl CgroupSandbox {
             .get(1)
             .ok_or(InternalError::ReadCgroupCpuStats)?
             .parse()
-            .map_err(|_| InternalError::ReadCgroupCpuStats)?;
+            .or(Err(InternalError::ReadCgroupCpuStats))?;
 
         Ok(cpu_time_in_us / 1000)
     }
@@ -108,10 +118,18 @@ impl CgroupSandbox {
 
 impl Drop for CgroupSandbox {
     fn drop(&mut self) {
+        // TODO: delete clocks here after testing.
+        let clock = Instant::now();
+
         if let Err(e) = self.inner.delete() {
             error!("Failed to delete cgroup: {:?}", e);
             return;
+        } else {
+            debug!("Deleted cgroup successfully.");
         }
+
+        let duration = clock.elapsed();
+        debug!("Duration to delete cgroup: {:?}", duration,);
     }
 }
 
@@ -127,7 +145,7 @@ impl TimeSandbox {
             runner_exit_rx
                 // If runner process exits before timeout, [`Drop`] will send
                 // a message to this channel to stop waiting.
-                .recv_timeout(Duration::from_millis(calculate_timeout(limit)))
+                .recv_timeout(Duration::from_millis(calculate_timeout(limit, 10)))
                 // If timeout occurs, kill the runner process.
                 .is_err_and(|_| {
                     info!("Kill runner process due to timeout.");
@@ -145,7 +163,7 @@ impl TimeSandbox {
 impl Drop for TimeSandbox {
     fn drop(&mut self) {
         if let Ok(_) = self.runner_exit_tx.send(true) {
-            info!("Runner process exited before timeout; Cancel timeout killer.");
+            info!("Runner process exited before timeout; canceling timeout killer...");
         }
         if let Some(handle) = self.handle.take() {
             if let Ok(_) = handle.join() {
@@ -154,6 +172,28 @@ impl Drop for TimeSandbox {
         }
     }
 }
+
+const SENSITIVE_DIRS: [&str; 11] = [
+    // NOTE: The following directories are not masked because they have...
+    // "/bin",              // Core commands
+    // "/lib", "/lib64"     // Shared libraries
+    // "/proc",             // Process and system information
+    // "/tmp",              // Temporary files
+    // "/usr",              // User binaries and read-only data
+    // "/var",              // Variable data files
+    //
+    "/boot", // Kernel images, GRUB configuration files, etc.
+    "/dev",  // Hardware devices as files
+    "/etc",  // System configuration files
+    "/home", // User home directories
+    "/mnt",  // Used by administrators for mounting filesystems
+    "/opt",  // Third-party software packages
+    "/root", // Root user's home directory
+    "/run",  // Runtime variable data
+    "/sbin", // System binaries
+    "/srv",  // Data for services provided by the system
+    "/sys",  // System and kernel information
+];
 
 /// Mount runner process into a safe mount namespace.
 pub(crate) fn mount_sandbox() -> Result<(), nix::Error> {
@@ -175,21 +215,17 @@ pub(crate) fn mount_sandbox() -> Result<(), nix::Error> {
         Some("mode=000"),
     )?;
 
-    // Mount empty space for sensitive directories
-    const SENSITIVE_DIRS: [&str; 4] = [
-        "/etc", "/root", "/var",
-        "/home",
-        // "/lib", "/lib64" // Has important shared libraries
-        // "/usr"           // Has basic commands & binaries like JVM
-    ];
+    // Mount empty space for sensitive directories.
     for dir_path in SENSITIVE_DIRS {
-        mount::mount(
-            Some("tmpfs"),
-            dir_path,
-            Some("tmpfs"),
-            MsFlags::empty(),
-            Some("size=2m,mode=000"),
-        )?;
+        if Path::new(dir_path).is_dir() {
+            mount::mount(
+                Some("tmpfs"),
+                dir_path,
+                Some("tmpfs"),
+                MsFlags::empty(),
+                Some("size=2m,mode=000"),
+            )?;
+        }
     }
 
     // Remount working directory to be writable for logging.
@@ -213,7 +249,8 @@ pub(crate) fn mount_sandbox() -> Result<(), nix::Error> {
 /// limit to avoid `JudgeStatus::RuntimeError` that cannot be traced.
 pub(crate) fn set_limit_to_sandbox(resource_limit: &ResourceLimit) -> Result<(), nix::Error> {
     if let Some(limit_ms) = resource_limit.cpu_time {
-        let limit_s = calculate_timeout(limit_ms) / 1000;
+        // Ensure to add at least 1 second to avoid immediate termination.
+        let limit_s = calculate_timeout(limit_ms / 1000, 1).into();
         resource::setrlimit(Resource::RLIMIT_CPU, limit_s, limit_s)?;
     };
 
@@ -223,22 +260,25 @@ pub(crate) fn set_limit_to_sandbox(resource_limit: &ResourceLimit) -> Result<(),
     };
 
     if let Some(limit) = resource_limit.stack {
-        let limit = limit.add(4 * MEBI_BYTE).into();
+        let limit = limit.add(MEBI_BYTE).into();
         resource::setrlimit(Resource::RLIMIT_STACK, limit, limit)?;
     };
 
     if let Some(limit) = resource_limit.output {
-        let limit = limit.add(1 * MEGA_BYTE).into();
+        let limit = limit.add(MEGA_BYTE).into();
         resource::setrlimit(Resource::RLIMIT_FSIZE, limit, limit)?;
     };
 
     Ok(())
 }
 
-fn calculate_timeout<T>(limit: T) -> u64
+fn calculate_timeout<T>(limit: T, min_margin: T) -> u64
 where
     T: Copy + Ord + Div<Output = T> + From<u8> + Add<Output = T> + Into<u64>,
 {
-    let margin = cmp::max(limit / T::from(20), T::from(1)); // 5% or 1ms
+    let margin = cmp::max(limit / T::from(20), min_margin); // 5% or `min_margin`
     (limit + margin).into()
 }
+
+#[cfg(test)]
+mod tests;
