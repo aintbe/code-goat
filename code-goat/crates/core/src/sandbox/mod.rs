@@ -1,9 +1,7 @@
 pub(crate) mod seccomp;
 
 use std::{
-    cmp,
-    convert::Infallible,
-    env,
+    cmp, env,
     ops::{Add, Div},
     path::Path,
     sync::mpsc::{self, Sender},
@@ -198,7 +196,7 @@ const SENSITIVE_DIRS: [&str; 11] = [
 ];
 
 /// Mount runner process into a safe mount namespace.
-pub(crate) fn mount_sandbox() -> Result<(), Infallible> {
+pub(crate) fn mount_sandbox() -> Result<(), nix::Error> {
     // Make mount namespace private to avoid affecting the host system.
     mount::mount(
         None::<&str>,
@@ -206,8 +204,7 @@ pub(crate) fn mount_sandbox() -> Result<(), Infallible> {
         None::<&str>,
         MsFlags::MS_PRIVATE | MsFlags::MS_REC,
         None::<&str>,
-    )
-    .expect("Failed to make mount namespace private.");
+    )?;
 
     // Remount root filesystem as read-only.
     mount::mount(
@@ -216,8 +213,7 @@ pub(crate) fn mount_sandbox() -> Result<(), Infallible> {
         None::<&str>,
         MsFlags::MS_BIND | MsFlags::MS_REMOUNT | MsFlags::MS_RDONLY | MsFlags::MS_REC,
         Some("mode=000"),
-    )
-    .expect("Failed to remount root filesystem as read-only.");
+    )?;
 
     // Mount empty space for sensitive directories.
     for dir_path in SENSITIVE_DIRS {
@@ -228,11 +224,7 @@ pub(crate) fn mount_sandbox() -> Result<(), Infallible> {
                 Some("tmpfs"),
                 MsFlags::empty(),
                 Some("size=2m,mode=000"),
-            )
-            .expect(&format!(
-                "Failed to mount empty tmpfs to sensitive directory {}.",
-                dir_path
-            ));
+            )?;
         }
     }
 
@@ -245,9 +237,8 @@ pub(crate) fn mount_sandbox() -> Result<(), Infallible> {
             None::<&str>,
             MsFlags::MS_BIND | MsFlags::MS_REC,
             None::<&str>,
-        )
-        .expect("Failed to remount workspace as writable.");
-        unistd::chdir(workspace).expect("Failed to change directory to workspace.");
+        )?;
+        unistd::chdir(workspace)?;
     }
 
     Ok(())

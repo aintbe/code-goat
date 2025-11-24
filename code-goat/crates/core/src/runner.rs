@@ -67,11 +67,8 @@ fn run(
         Err(e)
     };
 
-    if let Err(_) = sandbox::mount_sandbox() {
-        return abort(
-            nix::Error::from(nix::errno::Errno::UnknownErrno),
-            "Failed to mount user namespace",
-        );
+    if let Err(e) = sandbox::mount_sandbox() {
+        return abort(e, "Failed to mount user namespace");
     }
 
     if let Err(e) = sandbox::set_limit_to_sandbox(&spec.resource_limit) {

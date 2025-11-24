@@ -13,8 +13,4 @@ services:
     cgroup: host
     stdin_open: true
     tty: true
-    privileged: true
-    # ${IS_PRIVILEGED:-false}
-    # security_opt:
-    #   - seccomp=unconfined
-    #   - apparmor=unconfined
+    privileged: ${IS_PRIVILEGED:-false}
