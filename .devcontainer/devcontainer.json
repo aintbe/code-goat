@@ -1,6 +1,6 @@
 {
   "name": "judger",
-  "dockerComposeFile": "docker-compose.yml",
+  "dockerComposeFile": "docker-compose.yaml",
   "service": "code-goat-dev",
   "workspaceFolder": "/workspace",
   "customizations": {
