@@ -1,7 +1,7 @@
 use std::{
     fmt::Display,
     fs::{File, OpenOptions},
-    io::{self},
+    io,
     os::fd::AsFd,
     sync::OnceLock,
 };
@@ -94,7 +94,7 @@ impl LoggerSettings {
             LOGGER_RELOAD_HANDLE
                 .set(reload_handle)
                 // This should never fail as we check existence above.
-                .map_err(|_| LoggerError::Register)?;
+                .or(Err(LoggerError::Register))?;
         };
 
         Ok(self.destination)
@@ -146,7 +146,7 @@ pub fn configure_logger(log_path: &Option<String>) -> Result<(), LoggerError> {
             ))
         }
         None => {
-            let stdout = std::io::stdout();
+            let stdout = io::stdout();
             let file = unistd::dup(stdout.as_fd())
                 .map(File::from)
                 .map_err(LoggerError::Dup)?;
@@ -163,7 +163,7 @@ pub fn configure_logger(log_path: &Option<String>) -> Result<(), LoggerError> {
             Ok(())
         }
         Err(_) => {
-            let _ = LoggerSettings::default().apply()?;
+            let _ = LoggerSettings::default().apply();
             // Always update the destination to `LoggerDestination::None`
             // (even if it failed to disable logger), so that future calls
             // can retry initializing the logger.
@@ -176,7 +176,7 @@ pub fn configure_logger(log_path: &Option<String>) -> Result<(), LoggerError> {
 #[derive(Debug, thiserror::Error)]
 pub enum LoggerError {
     #[error("Failed to create/open file: {0}")]
-    File(#[from] io::Error),
+    File(#[from] std::io::Error),
 
     #[error("Failed to duplicate file descriptor: {0}")]
     Dup(#[from] nix::Error),
