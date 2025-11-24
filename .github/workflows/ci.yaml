@@ -41,12 +41,12 @@ jobs:
       - name: Build Library
         working-directory: ./code-goat
         run: |
-          cargo build --release --package judger --target ${{ matrix.rustup_target }}
+          cargo build --release --package code_goat --target ${{ matrix.rustup_target }}
 
       - uses: actions/upload-artifact@v4
         with:
           name: code-goat-${{ matrix.name }}
-          path: ./target/${{ matrix.rustup_target }}/release/libjudger.so
+          path: ./target/${{ matrix.rustup_target }}/release/libcode_goat.so
 
   test:
     name: Test (${{ matrix.name }})
@@ -67,4 +67,4 @@ jobs:
       - name: Run tests
         working-directory: ./code-goat
         run: |
-          cargo test --target ${{ matrix.rustup_target }} --package judger
+          cargo test --target ${{ matrix.rustup_target }} --package code_goat
