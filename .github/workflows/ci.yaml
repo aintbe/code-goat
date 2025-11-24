@@ -73,10 +73,19 @@ jobs:
       - name: Run tests
         working-directory: ./code-goat
         run: |
-          # Mount root as private to stop propagation before testing
-          sudo mount --bind / /
+          # Run all tests except mount-related tests
+          cargo test --package code_goat --target ${{ matrix.rustup_target }} \
+            -- --skip sandbox::tests::mount_sandbox
+      
+      - name: Run mount-related tests
+        run: |
+          # Mount operation tests require special privileges, so we should run them 
+          # separately and with elevated privileges. Also, we need to lose connections
+          # to the host namespaces to perform mount operations in GitHub Actions.
+          sudo mount --make-rprivate /
           sudo env "PATH=$PATH" \
             "RUSTUP_HOME=$HOME/.rustup" \
             "CARGO_HOME=$HOME/.cargo" \
             "RUST_BACKTRACE=full" \
-            cargo test --package code_goat --target x86_64-unknown-linux-gnu
+            cargo test --package code_goat --target ${{ matrix.rustup_target }} \
+              -- sandbox::tests::mount_sandbox
