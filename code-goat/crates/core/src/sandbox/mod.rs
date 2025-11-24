@@ -1,7 +1,9 @@
 pub(crate) mod seccomp;
 
 use std::{
-    cmp, env,
+    cmp,
+    convert::Infallible,
+    env,
     ops::{Add, Div},
     path::Path,
     sync::mpsc::{self, Sender},
@@ -196,7 +198,16 @@ const SENSITIVE_DIRS: [&str; 11] = [
 ];
 
 /// Mount runner process into a safe mount namespace.
-pub(crate) fn mount_sandbox() -> Result<(), nix::Error> {
+pub(crate) fn mount_sandbox() -> Result<(), Infallible> {
+    mount::mount(
+        Some("/"),
+        "/",
+        None::<&str>,
+        MsFlags::MS_BIND | MsFlags::MS_REC,
+        None::<&str>,
+    )
+    .expect("??????");
+
     // Make mount namespace private to avoid affecting the host system.
     mount::mount(
         None::<&str>,

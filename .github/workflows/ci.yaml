@@ -72,6 +72,8 @@ jobs:
         with:
           subFolder: .
           runCmd: |
-            sudo mount --make-rprivate /
+            set -ex
+
+            # mount --bind / /
             cd ./code-goat
             RUST_BACKTRACE=full cargo test --package code_goat --target ${{ matrix.rustup_target }}
