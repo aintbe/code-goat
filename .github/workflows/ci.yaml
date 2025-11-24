@@ -85,9 +85,9 @@ jobs:
           # to a host volume that prevent us from making the root mount private. 
           # As a workaround, we should unmount from the host. Since we cannot use 
           # `mount` operation without `sudo`, we run the test command with it as well.
-          sudo mount --make-rprivate /
-          sudo env "PATH=$PATH" \
-            "RUSTUP_HOME=$HOME/.rustup" \
-            "RUST_BACKTRACE=full" \
+          sudo unshare --mount --propagation private -- \
+            env "PATH=$PATH" \
+              "RUSTUP_HOME=$HOME/.rustup" \
+              "RUST_BACKTRACE=full" \
             cargo test --package code_goat --target ${{ matrix.rustup_target }} \
               -- sandbox::tests::mount_sandbox
