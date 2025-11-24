@@ -1,7 +1,7 @@
-use std::ffi::{CStr, CString, c_char, c_int, c_uchar, c_uint, c_ulonglong};
-use std::time::Instant;
+use std::ffi::{CStr, CString, c_char, c_int, c_uint, c_ulonglong};
+use std::num::TryFromIntError;
+use std::str::FromStr;
 
-use log::info;
 use nix::libc::c_ushort;
 
 use crate::logger::LoggerError;
@@ -19,7 +19,7 @@ pub struct CJudgeSpec {
     /// Elements in `args` and `envs` should be separated by " ".
     pub args: *const c_char,
     pub envs: *const c_char,
-    pub scmp_policy: c_uchar,
+    pub scmp_policy: *const c_char,
     pub resource_limit: CResourceLimit,
 }
 
@@ -33,16 +33,19 @@ pub struct CResourceLimit {
     pub output: c_uint,
 }
 
-impl From<CResourceLimit> for ResourceLimit {
-    fn from(limit: CResourceLimit) -> Self {
-        Self {
-            memory: wrap_number(U63::new(limit.memory)),
+impl TryFrom<CResourceLimit> for ResourceLimit {
+    type Error = TryFromIntError;
+
+    fn try_from(limit: CResourceLimit) -> Result<Self, Self::Error> {
+        let memory_limit: U63 = limit.memory.try_into()?;
+        Ok(Self {
+            memory: wrap_number(memory_limit),
             cpu_time: wrap_number(limit.cpu_time),
             real_time: wrap_number(limit.real_time),
             stack: wrap_number(limit.stack),
             n_process: wrap_number(limit.n_process),
             output: wrap_number(limit.output),
-        }
+        })
     }
 }
 
@@ -81,9 +84,8 @@ pub extern "C" fn judger_judge(spec: CJudgeSpec) -> *mut c_char {
 fn parse<'a>(cspec: CJudgeSpec) -> Result<JudgeSpec, &'a str> {
     let exe_path = {
         let source = parse_str("exe_path", cspec.exe_path)?;
-        CString::new(source).map_err(|_| "exe_path")
+        CString::new(source).or(Err("exe_path"))
     }?;
-
     let input_path = parse_optional_str("input_path", cspec.input_path)?;
     let answer_path = parse_optional_str("answer_path", cspec.answer_path)?;
     let output_path = parse_optional_str("output_path", cspec.output_path)?;
@@ -92,7 +94,11 @@ fn parse<'a>(cspec: CJudgeSpec) -> Result<JudgeSpec, &'a str> {
     let args = parse_cstr_array("args", cspec.args)?;
     let envs = parse_cstr_array("envs", cspec.envs)?;
 
-    return Ok(RunSpec::from_cstr(
+    let scmp_policy = parse_str("scmp_policy", cspec.scmp_policy)
+        .and_then(|s| ScmpPolicy::from_str(s).or(Err("scmp_policy")))?;
+    let resource_limit = cspec.resource_limit.try_into().or(Err("resource_limit"))?;
+
+    Ok(JudgeSpec::from_c_spec(
         exe_path,
         input_path,
         answer_path,
@@ -100,15 +106,16 @@ fn parse<'a>(cspec: CJudgeSpec) -> Result<JudgeSpec, &'a str> {
         error_path,
         args,
         envs,
-        ResourceLimit::from(cspec.resource_limit),
-    ));
+        scmp_policy,
+        resource_limit,
+    ))
 }
 
 fn parse_str(key: &str, string: *const c_char) -> Result<&str, &str> {
     if string.is_null() {
         return Err(key);
     }
-    unsafe { CStr::from_ptr(string) }.to_str().map_err(|_| key)
+    unsafe { CStr::from_ptr(string) }.to_str().or(Err(key))
 }
 
 fn parse_optional_str(key: &str, string: *const c_char) -> Result<Option<String>, &str> {
@@ -117,7 +124,7 @@ fn parse_optional_str(key: &str, string: *const c_char) -> Result<Option<String>
     }
     let source = unsafe { CStr::from_ptr(string) }
         .to_str()
-        .map_err(|_| key)?
+        .or(Err(key))?
         .to_string();
 
     Ok(Some(source))
@@ -127,7 +134,7 @@ fn parse_cstr_array(key: &str, array: *const c_char) -> Result<Vec<CString>, &st
     if array.is_null() {
         return Ok(vec![]);
     }
-    let args_str = unsafe { CStr::from_ptr(array) }.to_str().map_err(|_| key)?;
+    let args_str = unsafe { CStr::from_ptr(array) }.to_str().or(Err(key))?;
 
     let (ok_args, err_args): (Vec<_>, Vec<_>) = args_str
         .split_whitespace()
@@ -153,7 +160,7 @@ pub extern "C" fn judger_free(return_value: *mut c_char) {
 }
 
 ////
-/// ### Examples
+/// Examples
 /// ```c
 /// int res = c_grade_output(...);
 /// if (res < 0) { printf("Error Occured"); }

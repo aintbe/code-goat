@@ -1,4 +1,4 @@
-use std::{ffi::CString, io, iter};
+use std::{ffi::CString, iter, num::TryFromIntError};
 
 use log::warn;
 use serde::Serialize;
@@ -166,19 +166,41 @@ impl ResourceLimit {
 pub struct U63(u64);
 
 impl U63 {
-    const MASK: u64 = 1 << 63;
+    pub const MAX: Self = Self(1 << 63 - 1);
 
-    pub fn new(value: u64) -> Self {
-        if value & Self::MASK != 0 {
-            warn!("Value {} exceeds 63 bits, truncating to 63 bits", value);
-            Self(value & !Self::MASK)
-        } else {
+    fn saturating_new(value: u64) -> Self {
+        if Self::does_fit(value) {
             Self(value)
+        } else {
+            warn!("Value {} exceeds 63 bits, saturating to 63 bits", value);
+            Self::MAX
         }
     }
 
-    pub fn add<T: Into<u64>>(&self, other: T) -> Self {
-        Self::new(self.0 + other.into())
+    pub fn does_fit(value: u64) -> bool {
+        value <= Self::MAX.0
+    }
+
+    /// Saturating addition. Computes `self + rhs`, saturating at the boundary
+    /// of 63 bits if overflow occurs.
+    pub fn saturating_add<T: Into<u64>>(&self, other: T) -> Self {
+        Self::saturating_new(self.0.saturating_add(other.into()))
+    }
+}
+
+impl TryFrom<u64> for U63 {
+    type Error = TryFromIntError;
+
+    fn try_from(value: u64) -> Result<Self, Self::Error> {
+        if Self::does_fit(value) {
+            Ok(Self(value))
+        } else {
+            // We need to generate a [`TryFromIntError`] using std library functions
+            // because TryFromIntError does not have a public constructor.
+            // [`u32::try_from will`] always fail here as `!does_fit` ensures that
+            // the value is larger than u32::MAX.
+            Err(u32::try_from(value).unwrap_err())
+        }
     }
 }
 
@@ -196,7 +218,7 @@ impl From<U63> for i64 {
 
 impl From<u8> for U63 {
     fn from(value: u8) -> Self {
-        Self::new(value.into())
+        Self::saturating_new(value.into())
     }
 }
 
@@ -226,6 +248,7 @@ pub enum JudgeStatus {
     CpuTimeLimitExceeded,
     RealTimeLimitExceeded,
     MemoryLimitExceeded,
+    // TODO: OutputLimitExceeded,
     RuntimeError,
     InternalError,
 }
@@ -248,7 +271,7 @@ pub enum InternalError {
     Clone(nix::Error),
 
     #[error("Failed to notify via channel: {0}")]
-    Notify(nix::Error),
+    Notify(std::io::Error),
 
     #[error("Ended up in an unsupported wait status: {0}")]
     UnsupportedWait(String),
@@ -257,10 +280,10 @@ pub enum InternalError {
     Wait(nix::Error),
 
     #[error("Failed to read output: {0}")]
-    ReadOutput(io::Error),
+    ReadOutput(std::io::Error),
 
     #[error("I/O error occurred: {0}")]
-    Io(#[from] io::Error),
+    Io(#[from] std::io::Error),
 }
 
 #[derive(Debug, Serialize)]
@@ -374,16 +397,19 @@ mod tests {
         use super::*;
 
         #[test]
-        fn new_within_bounds() {
-            let value = (1 << 63) - 1;
-            assert_eq!(u64::from(value), value);
+        fn saturating_add_within_bounds() {
+            let a = 1;
+            let b = 2;
+            let res = U63::saturating_new(a).saturating_add(b);
+            assert_eq!(u64::from(res), a + b);
         }
 
         #[test]
-        fn new_exceeds_bounds() {
-            let value = (1 << 63) + 1;
-            let u63_value = U63::new(value);
-            assert_eq!(u64::from(u63_value), 1);
+        fn saturating_add_exceeds_bounds() {
+            let a = U63::MAX.into();
+            let b = u64::MAX;
+            let res = U63::saturating_new(a).saturating_add(b);
+            assert_eq!(u64::from(res), U63::MAX.0);
         }
     }
 }
