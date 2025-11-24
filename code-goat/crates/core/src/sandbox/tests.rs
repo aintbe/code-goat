@@ -60,7 +60,7 @@ mod mount_sandbox {
                             | CloneFlags::CLONE_NEWPID,
                     )
                     .expect("Failed to unshare mount namespace");
-                    mount_sandbox().expect("Failed to mount sandbox");
+                    mount_sandbox();
                     test_function(); // Run the test function after mounting.
                 });
 

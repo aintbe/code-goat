@@ -204,7 +204,8 @@ pub(crate) fn mount_sandbox() -> Result<(), nix::Error> {
         None::<&str>,
         MsFlags::MS_PRIVATE | MsFlags::MS_REC,
         None::<&str>,
-    )?;
+    )
+    .expect("Failed to make mount namespace private.");
 
     // Remount root filesystem as read-only.
     mount::mount(
@@ -213,7 +214,8 @@ pub(crate) fn mount_sandbox() -> Result<(), nix::Error> {
         None::<&str>,
         MsFlags::MS_BIND | MsFlags::MS_REMOUNT | MsFlags::MS_RDONLY | MsFlags::MS_REC,
         Some("mode=000"),
-    )?;
+    )
+    .expect("Failed to remount root filesystem as read-only.");
 
     // Mount empty space for sensitive directories.
     for dir_path in SENSITIVE_DIRS {
@@ -224,7 +226,11 @@ pub(crate) fn mount_sandbox() -> Result<(), nix::Error> {
                 Some("tmpfs"),
                 MsFlags::empty(),
                 Some("size=2m,mode=000"),
-            )?;
+            )
+            .expect(&format!(
+                "Failed to mount empty tmpfs to sensitive directory {}.",
+                dir_path
+            ));
         }
     }
 
@@ -237,8 +243,9 @@ pub(crate) fn mount_sandbox() -> Result<(), nix::Error> {
             None::<&str>,
             MsFlags::MS_BIND | MsFlags::MS_REC,
             None::<&str>,
-        )?;
-        unistd::chdir(workspace)?;
+        )
+        .expect("Failed to remount workspace as writable.");
+        unistd::chdir(workspace).expect("Failed to change directory to workspace.");
     }
 
     Ok(())
