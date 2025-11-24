@@ -70,10 +70,13 @@ jobs:
         with:
           target: ${{ matrix.rustup_target }}
       
-      - name: Run tests on Host VM
+      - name: Run tests
         working-directory: ./code-goat
         run: |
-          # Mount root as private to stop propagation
+          # Mount root as private to stop propagation before testing
           sudo mount --bind / /
-          sudo -E RUST_BACKTRACE=full \
-            cargo test --package code_goat --target ${{ matrix.rustup_target }}
+          sudo env "PATH=$PATH" \
+            "RUSTUP_HOME=$HOME/.rustup" \
+            "CARGO_HOME=$HOME/.cargo" \
+            "RUST_BACKTRACE=full" \
+            cargo test --package code_goat --target x86_64-unknown-linux-gnu
