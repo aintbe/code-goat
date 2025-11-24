@@ -9,6 +9,7 @@ on:
 
 jobs:
   config:
+    name: Configure Matrix
     runs-on: ubuntu-latest
     outputs:
       matrix: ${{ steps.read.outputs.matrix }}
@@ -42,11 +43,12 @@ jobs:
         working-directory: ./code-goat
         run: |
           cargo build --release --package code_goat --target ${{ matrix.rustup_target }}
+          find . -name "libcode_goat.so"
 
       - uses: actions/upload-artifact@v4
         with:
           name: code-goat-${{ matrix.name }}
-          path: ./target/release/libcode_goat.so
+          path: ./target/${{ matrix.rustup_target }}/release/libcode_goat.so
 
   test:
     name: Test (${{ matrix.name }})
@@ -60,11 +62,11 @@ jobs:
     
     steps:
       - uses: actions/checkout@v4
-      - uses: ./.github/rust
-        with:
-          target: ${{ matrix.rustup_target }}
       
-      - name: Run tests
-        working-directory: ./code-goat
-        run: |
-          RUST_BACKTRACE=1 cargo test --package code_goat --target ${{ matrix.rustup_target }}
+      - name: Run tests in Dev Container
+        uses: devcontainers/ci@v0.3
+        with:
+          subFolder: .
+          runCmd: |
+            cd ./code-goat
+            RUST_BACKTRACE=full cargo test --package code_goat --target ${{ matrix.rustup_target }}

@@ -7,13 +7,9 @@ RUN apt-get update && apt-get install -y \
     golang-go \
     # tests & misc scripts
     cmake \
-    python3 \
-    python3-venv \
+    python3 python3-pip python3-venv \
     openjdk-17-jdk
 
 USER vscode
 RUN curl https://sh.rustup.rs -sSf | sh -s -- -y
 RUN PATH="$HOME/.cargo/bin:$PATH"
-
-RUN rustup target add aarch64-apple-darwin
-RUN rustup target add x86_64-unknown-linux-gnu
