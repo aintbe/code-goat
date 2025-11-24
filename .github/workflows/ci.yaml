@@ -15,6 +15,9 @@ jobs:
       matrix: ${{ steps.read.outputs.matrix }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          sparse-checkout: .github/platforms.json
+          sparse-checkout-cone: false
       
       - id: read
         run: |
@@ -48,7 +51,7 @@ jobs:
       - uses: actions/upload-artifact@v4
         with:
           name: code-goat-${{ matrix.name }}
-          path: ./target/${{ matrix.rustup_target }}/release/libcode_goat.so
+          path: ./code-goat/target/${{ matrix.rustup_target }}/release/libcode_goat.so
 
   test:
     name: Test (${{ matrix.name }})
@@ -67,6 +70,9 @@ jobs:
         uses: devcontainers/ci@v0.3
         with:
           subFolder: .
+          runArgs: |
+            --security-opt seccomp=unconfined
+            --security-opt apparmor=unconfined
           runCmd: |
             cd ./code-goat
             RUST_BACKTRACE=full cargo test --package code_goat --target ${{ matrix.rustup_target }}
