@@ -46,7 +46,7 @@ jobs:
       - uses: actions/upload-artifact@v4
         with:
           name: code-goat-${{ matrix.name }}
-          path: ./target/${{ matrix.rustup_target }}/release/libcode_goat.so
+          path: ./target/release/libcode_goat.so
 
   test:
     name: Test (${{ matrix.name }})
@@ -67,4 +67,4 @@ jobs:
       - name: Run tests
         working-directory: ./code-goat
         run: |
-          cargo test --target ${{ matrix.rustup_target }} --package code_goat
+          RUST_BACKTRACE=1 cargo test --package code_goat --target ${{ matrix.rustup_target }}
